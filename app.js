@@ -717,9 +717,22 @@ const REAL_QUOTES = [
     text: "Hamer is de horzel die onze samenleving hard nodig heeft.",
     source: "iFilosofie",
   },
+  // Blurbs voor Wat vrijheid van je vraagt (2026) — bron: jurrienhamer.nl
+  {
+    text: "In alle eerlijkheid: ik was klaar om het liberalisme achter me te laten. Maar Jurriën Hamer laat zien dat het ook anders kan, en haalt het beste in de liberaal naar boven.",
+    source: "Tim Hofman · over Wat vrijheid van je vraagt",
+  },
+  {
+    text: "Van vrijheid heb je nooit genoeg, of toch wel? Jurriën Hamer kruipt onder je huid en sleept je mee in een historisch en filosofisch betoog dat net zo lichtvoetig als beklemmend is. Een must-read voor dappere burgers!",
+    source: "Beatrice de Graaf · over Wat vrijheid van je vraagt",
+  },
   {
     text: "Hamer slaat de spijker op zijn kop. Er is niets vrijblijvends aan het liberalisme.",
-    source: "Beatrice de Graaf · over Wat vrijheid van je vraagt",
+    source: "Tim Fransen · over Wat vrijheid van je vraagt",
+  },
+  {
+    text: "Een van de belangrijkste boeken van dit jaar. Hamer brengt de grote thema's van onze tijd samen, rekent af met de vrijblijvendheid van het verleden, en legt glashelder bloot welke opgave voor ons ligt.",
+    source: "Rutger Bregman · over Wat vrijheid van je vraagt",
   },
 ];
 
