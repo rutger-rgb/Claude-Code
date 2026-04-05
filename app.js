@@ -442,16 +442,7 @@ function dismissSplash() {
 }
 window.dismissSplash = dismissSplash;
 
-const SPLASH_SUBTAGLINES = [
-  "De officiële Jurriën Hamer companion app",
-  "Nietzsche zou het leuk vinden",
-  "Filosofie voor een bloedserieuze tijd",
-  "Hammer time. Letterlijk.",
-  "Voor als de gedachten te zwaar worden",
-  "Gebeukt door inzicht sinds 2021",
-  "Denken is slaan. En omgekeerd.",
-  "Speciaal voor Hammerhead · met liefde",
-];
+const SPLASH_SUBTAGLINE = "De officiële Jurriën Hamer companion app";
 
 function showSplash() {
   if (sessionStorage.getItem("hh_splash_seen")) return;
@@ -460,11 +451,9 @@ function showSplash() {
   splash.hidden = false;
   sessionStorage.setItem("hh_splash_seen", "1");
 
-  // Pick a random sub-tagline each session
+  // Always show the companion app subtitle
   const sub = document.getElementById("splashSubTagline");
-  if (sub) {
-    sub.textContent = SPLASH_SUBTAGLINES[Math.floor(Math.random() * SPLASH_SUBTAGLINES.length)];
-  }
+  if (sub) sub.textContent = SPLASH_SUBTAGLINE;
 
   // Thunk sound + haptic at exact impact moment (3.2s)
   setTimeout(() => {
@@ -1685,6 +1674,9 @@ $("#addQuote").addEventListener("click", () => {
   quotes.push(newQ);
   saveCustomQuotes(quotes);
   BLURBS = buildBlurbs();
+  const card = document.getElementById("blurbCard");
+  if (card) card.style.minHeight = "0";
+  setTimeout(lockBlurbCardHeight, 50);
   $("#quoteText").value = "";
   $("#quoteSource").value = "";
   toast("Quote toegevoegd ✨");
@@ -1771,6 +1763,31 @@ function buildBlurbs() {
 let BLURBS = buildBlurbs();
 
 let blurbIdx = -1;
+
+/* Measure the tallest blurb at current card width and lock min-height.
+ * Prevents visible layout jumps when switching between short/long quotes. */
+function lockBlurbCardHeight() {
+  const card = document.getElementById("blurbCard");
+  const textEl = document.getElementById("blurbText");
+  const sourceEl = document.getElementById("blurbSource");
+  if (!card || !textEl || !sourceEl || !BLURBS.length) return;
+  const savedText = textEl.textContent;
+  const savedSource = sourceEl.textContent;
+  const savedMinHeight = card.style.minHeight;
+  card.style.minHeight = "0";
+  let max = 0;
+  for (const b of BLURBS) {
+    textEl.textContent = b.text;
+    sourceEl.textContent = "— " + b.source;
+    // Force reflow and read height
+    const h = card.offsetHeight;
+    if (h > max) max = h;
+  }
+  textEl.textContent = savedText;
+  sourceEl.textContent = savedSource;
+  card.style.minHeight = (max || parseInt(savedMinHeight, 10) || 0) + "px";
+}
+
 function nextBlurb() {
   let i;
   do {
@@ -1789,6 +1806,14 @@ function nextBlurb() {
   }, 150);
 }
 $("#nextBlurb").addEventListener("click", nextBlurb);
+
+// Lock the blurb card height once layout is stable
+window.addEventListener("load", () => setTimeout(lockBlurbCardHeight, 300));
+window.addEventListener("resize", () => {
+  const card = document.getElementById("blurbCard");
+  if (card) { card.style.minHeight = "0"; }
+  setTimeout(lockBlurbCardHeight, 100);
+});
 
 /* ===================================================================
    Service worker + realtime article notifications
@@ -1872,9 +1897,12 @@ async function init() {
     await migrateClearSeededArticles();
     await pullAll();
     BLURBS = buildBlurbs();
+    const _card = document.getElementById("blurbCard");
+    if (_card) _card.style.minHeight = "0";
     renderMigraine();
     renderArticles();
     nextBlurb();
+    setTimeout(lockBlurbCardHeight, 400);
     applyTimeGreeting();
     subscribeArticleInserts(swReg);
     // Dynamic island style confirmation
