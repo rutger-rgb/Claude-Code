@@ -21,19 +21,30 @@
   <!-- Splash screen — cinematic intro on first load per session -->
   <div id="splash" class="splash" hidden>
     <div class="splash-stars"></div>
-    <div class="splash-core">
-      <div class="splash-bust">🗿</div>
-      <div class="splash-hammer">🔨</div>
-      <div class="splash-flash"></div>
+    <div class="splash-vignette"></div>
+    <div class="splash-shake">
+      <div class="splash-core">
+        <div class="splash-shockwave"></div>
+        <div class="splash-shockwave delay"></div>
+        <div class="splash-bust">🗿</div>
+        <div class="splash-hammer">🔨</div>
+        <div class="splash-flash"></div>
+        <div class="splash-particles">
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span>
+        </div>
+      </div>
+      <div class="splash-title-wrap">
+        <h1 class="splash-title">
+          <span class="ch">H</span><span class="ch">A</span><span class="ch">M</span><span class="ch">M</span><span class="ch">E</span><span class="ch">R</span><span class="ch">H</span><span class="ch">E</span><span class="ch">A</span><span class="ch">D</span>
+          <span class="ch space">&nbsp;</span>
+          <span class="ch">H</span><span class="ch">Q</span>
+        </h1>
+      </div>
+      <div class="splash-tagline" id="splashTagline">Filosoferen met de hamer</div>
+      <div class="splash-subtagline" id="splashSubTagline"></div>
     </div>
-    <div class="splash-title-wrap">
-      <h1 class="splash-title">
-        <span class="ch">H</span><span class="ch">A</span><span class="ch">M</span><span class="ch">M</span><span class="ch">E</span><span class="ch">R</span><span class="ch">H</span><span class="ch">E</span><span class="ch">A</span><span class="ch">D</span>
-        <span class="ch space">&nbsp;</span>
-        <span class="ch">H</span><span class="ch">Q</span>
-      </h1>
-    </div>
-    <div class="splash-tagline">Filosoferen met de hamer</div>
     <button class="splash-skip" id="splashSkip" type="button" onclick="window.dismissSplash && window.dismissSplash()">Skip</button>
   </div>
 

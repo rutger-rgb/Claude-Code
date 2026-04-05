@@ -442,15 +442,40 @@ function dismissSplash() {
 }
 window.dismissSplash = dismissSplash;
 
+const SPLASH_SUBTAGLINES = [
+  "De officiële Jurriën Hamer companion app",
+  "Nietzsche zou het leuk vinden",
+  "Filosofie voor een bloedserieuze tijd",
+  "Hammer time. Letterlijk.",
+  "Voor als de gedachten te zwaar worden",
+  "Gebeukt door inzicht sinds 2021",
+  "Denken is slaan. En omgekeerd.",
+  "Speciaal voor Hammerhead · met liefde",
+];
+
 function showSplash() {
   if (sessionStorage.getItem("hh_splash_seen")) return;
   const splash = document.getElementById("splash");
   if (!splash) return;
   splash.hidden = false;
   sessionStorage.setItem("hh_splash_seen", "1");
+
+  // Pick a random sub-tagline each session
+  const sub = document.getElementById("splashSubTagline");
+  if (sub) {
+    sub.textContent = SPLASH_SUBTAGLINES[Math.floor(Math.random() * SPLASH_SUBTAGLINES.length)];
+  }
+
+  // Thunk sound + haptic at exact impact moment (3.2s)
+  setTimeout(() => {
+    try { thunk(); } catch (e) {}
+    if (navigator.vibrate) navigator.vibrate([60, 40, 20]);
+  }, 3200);
+
+  // Remove splash at end of 6.5s animation
   setTimeout(() => {
     if (document.getElementById("splash")) splash.remove();
-  }, 5100);
+  }, 6600);
 }
 showSplash();
 
