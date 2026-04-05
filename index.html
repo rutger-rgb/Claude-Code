@@ -63,8 +63,8 @@
       <span class="onboard-dot"></span>
     </div>
     <div class="onboard-actions">
-      <button id="onboardSkip" class="btn-ghost">Overslaan</button>
-      <button id="onboardNext" class="btn-primary">Volgende</button>
+      <button id="onboardSkip" type="button" class="btn-ghost" onclick="window.onboardFinish && window.onboardFinish()">Overslaan</button>
+      <button id="onboardNext" type="button" class="btn-primary" onclick="window.onboardNext && window.onboardNext()">Volgende</button>
     </div>
   </div>
 
