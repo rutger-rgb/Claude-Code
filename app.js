@@ -25,6 +25,35 @@ const supa = (() => {
 
 const SYNC_ENABLED = !!supa;
 
+/* One-time seed of default articles into Supabase if the table is empty.
+ * Preserves the curated order by inserting in reverse with small delays,
+ * so the "most important" entry gets the newest created_at and floats to top. */
+async function seedArticlesIfEmpty() {
+  if (!supa) return;
+  if (localStorage.getItem("hh_articles_seeded_v2")) return;
+  try {
+    const { data, error } = await supa.from("articles").select("id").limit(1);
+    if (error) return;
+    if (data && data.length > 0) {
+      localStorage.setItem("hh_articles_seeded_v2", "1");
+      return;
+    }
+    // Insert in reverse order (least important first) so most important gets newest timestamp
+    const reversed = [...DEFAULT_ARTICLES].reverse();
+    for (const a of reversed) {
+      await supa.from("articles").insert({
+        title: a.title,
+        url: a.url,
+        description: a.desc,
+      });
+      await new Promise((r) => setTimeout(r, 15));
+    }
+    localStorage.setItem("hh_articles_seeded_v2", "1");
+  } catch (e) {
+    console.warn("seed articles failed", e);
+  }
+}
+
 async function pullAll() {
   if (!supa) return;
   try {
@@ -960,13 +989,68 @@ $("#funkBtn").addEventListener("click", () => {
 const ART_KEY = "hh_articles_v1";
 const SEEN_KEY = "hh_articles_seen_v1";
 
+/*
+ * Curated "Greatest Hits" van de webmaster (Rutger Bregman).
+ * Volgorde = belangrijkheid (meest prestigieus bovenaan). Bij het seeden
+ * in Supabase draaien we de lijst om zodat de belangrijkste het nieuwste
+ * created_at krijgt en dus bovenaan in de lijst verschijnt.
+ */
 const DEFAULT_ARTICLES = [
   {
-    id: "welcome",
-    title: "Welkom in Hammerhead HQ",
-    url: "https://example.com",
-    desc: "De webmaster heeft nog niks gedeeld, maar de verwachtingen zijn torenhoog.",
-    ts: Date.now(),
+    id: "seed-reith",
+    title: "BBC Reith Lectures 2025 — Moral Revolution",
+    url: "https://www.bbc.co.uk/programmes/m002jzks",
+    desc: "Vier lezingen in Londen, Liverpool, Edinburgh en Stanford over hoe kleine groepen gedreven mensen (abolitionisten, suffragettes) de wereld hebben veranderd. De BBC censureerde één zin over Trump — dat gaf alleen maar meer publiciteit.",
+    ts: Date.now() - 1000,
+  },
+  {
+    id: "seed-atlantic",
+    title: "Why Europe Needs Ukraine — The Atlantic",
+    url: "https://www.theatlantic.com/ideas/archive/2022/04/europe-needs-ukraine/629356/",
+    desc: "Mijn debuut in The Atlantic, geschreven na gesprekken met jonge Oekraïners in Kiev in oktober 2021. Een pleidooi voor EU-lidmaatschap. Kwam net op tijd uit.",
+    ts: Date.now() - 2000,
+  },
+  {
+    id: "seed-tobacco",
+    title: "Abolish the Tobacco Industry",
+    url: "https://www.moralambition.org/stories/abolish-the-tobacco-industry",
+    desc: "Het 'deadliest artifact in human history' — nog steeds acht miljoen doden per jaar. Niemand zou anderen op industriële schaal mogen verslaven en vergiftigen. Origineel op The Correspondent.",
+    ts: Date.now() - 3000,
+  },
+  {
+    id: "seed-davos",
+    title: "De Davos-moment — 'Taxes, taxes, taxes'",
+    url: "https://www.washingtonpost.com/business/2019/01/31/an-angry-historian-ripped-ultra-rich-over-tax-avoidance-davos-then-one-was-given-mic/",
+    desc: "Ik ging naar Davos en vertelde een zaal miljardairs dat ze belasting moeten betalen. 'It feels like I'm at a firefighters conference and no one's allowed to speak about water.' Het filmpje ging viral. Het veranderde… niet zoveel. Maar het voelde goed.",
+    ts: Date.now() - 4000,
+  },
+  {
+    id: "seed-moral",
+    title: "Moral Ambition — de eerste voorpublicatie",
+    url: "https://www.theguardian.com/books/2025/apr/23/moral-ambition-by-rutger-bregman-review-why-you-quit-your-job-to-make-the-world-a-better-place",
+    desc: "'No, you're not fine just the way you are.' Van alle dingen die we in deze wegwerp-wereld verspillen, is verspild talent het grootste verlies. The Guardian recenseert het boek.",
+    ts: Date.now() - 5000,
+  },
+  {
+    id: "seed-ted",
+    title: "Poverty Isn't a Lack of Character, It's a Lack of Cash",
+    url: "https://www.ted.com/talks/rutger_bregman_poverty_isn_t_a_lack_of_character_it_s_a_lack_of_cash",
+    desc: "De TED talk die Chris Anderson tot top 10 van 2017 koos. Basisinkomen is geen luxe maar een mensenrecht. De data is glashelder.",
+    ts: Date.now() - 6000,
+  },
+  {
+    id: "seed-bloomberg",
+    title: "Post-Davos Weekend Interview — Bloomberg",
+    url: "https://www.bloomberg.com/features/2026-rutger-bregman-weekend-interview/",
+    desc: "Na Davos, na de viral moment, na 'Humankind', na 'Moral Ambition' — waar staan we nu? En wat moeten we écht doen?",
+    ts: Date.now() - 7000,
+  },
+  {
+    id: "seed-cnn",
+    title: "From Taxing the Rich to Moral Ambition — CNN",
+    url: "https://www.cnn.com/2025/06/14/us/rutger-bregman-moral-ambition-cec",
+    desc: "Profiel over de evolutie van 'belast de miljardairs' naar 'ga zelf iets doen dat ertoe doet'. Met de School for Moral Ambition als concrete stap.",
+    ts: Date.now() - 8000,
   },
 ];
 
@@ -1298,6 +1382,7 @@ async function init() {
   // Show sync status in subtitle
   if (SYNC_ENABLED) {
     $("#brand-sub").textContent = "Filosoferen met de hamer · ⏳ syncen…";
+    await seedArticlesIfEmpty();
     await pullAll();
     BLURBS = buildBlurbs();
     renderMigraine();
