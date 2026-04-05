@@ -109,6 +109,18 @@ $$(".tab").forEach((tab) => {
 // Default mood on load
 setMood("view-migraine");
 
+// Logo intro animation — only first load per session
+if (!sessionStorage.getItem("hh_logo_played")) {
+  window.addEventListener("DOMContentLoaded", () => {
+    const logo = document.querySelector(".logo");
+    if (logo) {
+      logo.classList.add("intro");
+      sessionStorage.setItem("hh_logo_played", "1");
+      setTimeout(() => logo.classList.remove("intro"), 1500);
+    }
+  });
+}
+
 /* ---------- Toast ---------- */
 const toastEl = $("#toast");
 let toastTimer;
@@ -244,6 +256,90 @@ $("#clearLogs").addEventListener("click", () => {
   toast("Logs gewist.");
   pushDeleteAllMigraines();
 });
+
+/* Sparkline helpers */
+function bucketByDay(logs, days) {
+  const now = new Date();
+  const out = new Array(days).fill(0);
+  logs.forEach((t) => {
+    const diff = Math.floor((Date.now() - t) / 86400000);
+    if (diff >= 0 && diff < days) out[days - 1 - diff]++;
+  });
+  return out;
+}
+function bucketByMonth(logs, months) {
+  const now = new Date();
+  const out = new Array(months).fill(0);
+  logs.forEach((t) => {
+    const d = new Date(t);
+    const monthsAgo = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+    if (monthsAgo >= 0 && monthsAgo < months) out[months - 1 - monthsAgo]++;
+  });
+  return out;
+}
+function cumulative(logs, points) {
+  if (!logs.length) return new Array(points).fill(0);
+  const sorted = [...logs].sort((a, b) => a - b);
+  const first = sorted[0];
+  const last = Date.now();
+  const span = Math.max(last - first, 1);
+  const step = span / points;
+  const out = [];
+  for (let i = 1; i <= points; i++) {
+    const cutoff = first + step * i;
+    out.push(sorted.filter((t) => t <= cutoff).length);
+  }
+  return out;
+}
+function drawSparkline(canvas, data) {
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || 80;
+  const h = 22;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+
+  const max = Math.max(1, ...data);
+  const stepX = w / Math.max(1, data.length - 1);
+
+  // Read current accent color from CSS var
+  const accent = getComputedStyle(document.body).getPropertyValue("--accent").trim() || "#ff2d55";
+
+  // Area fill gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, accent + "66");
+  grad.addColorStop(1, accent + "00");
+
+  ctx.beginPath();
+  data.forEach((v, i) => {
+    const x = i * stepX;
+    const y = h - 2 - (v / max) * (h - 4);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.lineTo(w, h);
+  ctx.lineTo(0, h);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line on top
+  ctx.beginPath();
+  data.forEach((v, i) => {
+    const x = i * stepX;
+    const y = h - 2 - (v / max) * (h - 4);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.stroke();
+}
 
 /* Odometer-style number animation */
 function animateNumber(el, target) {
@@ -394,6 +490,11 @@ function renderMigraine() {
   animateNumber($("#statYear"), yearCount);
   animateNumber($("#statTotal"), logs.length);
 
+  // Sparklines: last 14 days, 12 months, all-time cumulative
+  drawSparkline($("#sparkMonth"), bucketByDay(logs, 14));
+  drawSparkline($("#sparkYear"), bucketByMonth(logs, 12));
+  drawSparkline($("#sparkTotal"), cumulative(logs, 30));
+
   const last = logs[0];
   $("#lastLog").textContent = last
     ? "Laatste aanval: " + formatRelative(last)
@@ -425,6 +526,17 @@ function renderMigraine() {
 
   renderHeatmap();
   renderInsights(logs);
+  updatePanicHeartbeat(logs);
+}
+
+/* Panic button pulses faster when there have been recent attacks */
+function updatePanicHeartbeat(logs) {
+  const now = Date.now();
+  const DAY = 86400000;
+  const recent = logs.filter((t) => now - t < 30 * DAY).length;
+  // 0 aanvallen → rustige 5s, veel aanvallen → snellere 1.8s
+  const duration = Math.max(1.8, 5 - recent * 0.25);
+  document.documentElement.style.setProperty("--heartbeat-duration", duration + "s");
 }
 
 /* GitHub-style calendar heatmap for the last year */
