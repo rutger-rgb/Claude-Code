@@ -2,7 +2,8 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Hammerhead HQ" />
@@ -194,20 +195,6 @@
           </div>
         </div>
 
-        <div class="card clock-card">
-          <div class="card-head">
-            <h3>Wanneer op de dag?</h3>
-            <span class="muted" id="clockPeakLabel"></span>
-          </div>
-          <div class="clock-wrap">
-            <svg class="clock-chart" viewBox="-110 -110 220 220" id="clockChart">
-              <circle class="clock-ring" cx="0" cy="0" r="92" />
-              <g id="clockLabels"></g>
-              <g id="clockBars"></g>
-            </svg>
-          </div>
-        </div>
-
         <div class="card">
           <div class="card-head">
             <h3>Recente aanvallen</h3>
@@ -261,11 +248,13 @@
         </a>
 
         <div class="notif-card" id="notifCard">
-          <div>
+          <div class="notif-text">
             <strong>Pushmeldingen</strong>
-            <div class="muted">Krijg een tik wanneer de webmaster iets nieuws publiceert via de admin-modus.</div>
+            <div class="muted" id="notifSub">Krijg een tik wanneer de webmaster iets nieuws deelt.</div>
           </div>
-          <button id="enableNotif" class="btn-primary small">Aanzetten</button>
+          <button id="enableNotif" class="toggle-switch" role="switch" aria-checked="false" aria-label="Pushmeldingen aan/uit">
+            <span class="toggle-knob"></span>
+          </button>
         </div>
 
         <ul id="articleList" class="article-list"></ul>

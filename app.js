@@ -353,6 +353,22 @@ if (shortcut === "funk") {
   setTimeout(() => $("#funkBtn")?.click(), 800);
 }
 
+/* PWA install prompt (Chrome Android) — capture event so we can
+ * trigger it later from a custom button if desired */
+let deferredInstallPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  // Show a discreet install hint in the island pill after splash
+  setTimeout(() => {
+    if (typeof island === "function") island("📱 Tik hieronder op 'Installeer'", 4000);
+  }, 6500);
+});
+window.addEventListener("appinstalled", () => {
+  deferredInstallPrompt = null;
+  if (typeof toast === "function") toast("Geïnstalleerd op beginscherm 🗿");
+});
+
 // Logo intro animation — only first load per session
 if (!sessionStorage.getItem("hh_logo_played")) {
   window.addEventListener("DOMContentLoaded", () => {
@@ -365,41 +381,27 @@ if (!sessionStorage.getItem("hh_logo_played")) {
   });
 }
 
-/* Device tilt 3D on panic button — real perspective response */
-let tiltEnabled = false;
-let tiltBase = null;
+/* Subtle 3D tilt on panic button — uses device orientation on Android
+ * (no permission needed) and mouse movement on desktop. iOS is skipped
+ * because its permission dialog is too invasive for a cosmetic effect. */
 function handleTilt(e) {
-  const beta = e.beta || 0;  // front/back
-  const gamma = e.gamma || 0; // left/right
-  if (!tiltBase) tiltBase = { beta, gamma };
-  const dx = Math.max(-20, Math.min(20, gamma - tiltBase.gamma));
-  const dy = Math.max(-20, Math.min(20, beta - tiltBase.beta));
+  const beta = e.beta || 0;
+  const gamma = e.gamma || 0;
+  const dx = Math.max(-20, Math.min(20, gamma));
+  const dy = Math.max(-20, Math.min(20, beta - 20)); // ~20° resting tilt
   const root = document.documentElement;
-  root.style.setProperty("--tilt-y", (dx * 0.7) + "deg");
-  root.style.setProperty("--tilt-x", (-dy * 0.7) + "deg");
-  root.style.setProperty("--light-x", (32 + dx * 0.8) + "%");
-  root.style.setProperty("--light-y", (28 + dy * 0.8) + "%");
-  root.style.setProperty("--spec-x", (35 + dx * 1.5) + "%");
-  root.style.setProperty("--spec-y", (25 + dy * 1.5) + "%");
+  root.style.setProperty("--tilt-y", (dx * 0.5) + "deg");
+  root.style.setProperty("--tilt-x", (-dy * 0.4) + "deg");
+  root.style.setProperty("--light-x", (32 + dx * 0.6) + "%");
+  root.style.setProperty("--light-y", (28 + dy * 0.6) + "%");
+  root.style.setProperty("--spec-x", (35 + dx * 1.2) + "%");
+  root.style.setProperty("--spec-y", (25 + dy * 1.2) + "%");
 }
-async function requestTilt() {
-  if (tiltEnabled) return;
-  // iOS 13+ requires explicit permission request triggered by user action
-  if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
-    try {
-      const state = await DeviceOrientationEvent.requestPermission();
-      if (state !== "granted") return;
-    } catch (e) { return; }
-  }
+// Android / non-iOS: attach listener directly (no permission needed)
+if (typeof DeviceOrientationEvent !== "undefined" &&
+    typeof DeviceOrientationEvent.requestPermission !== "function") {
   window.addEventListener("deviceorientation", handleTilt, { passive: true });
-  tiltEnabled = true;
 }
-// Kick off on first panic button press (ensures user gesture)
-document.addEventListener("click", (e) => {
-  if (e.target.closest("#panicBtn") || e.target.closest("#logoBtn")) {
-    requestTilt();
-  }
-}, { capture: true });
 // Desktop: mouse move simulates tilt
 if (!("ontouchstart" in window)) {
   window.addEventListener("mousemove", (e) => {
@@ -1004,74 +1006,8 @@ function renderMigraine() {
 
   renderHeatmap();
   renderActivityRing(logs);
-  renderClockChart(logs);
   renderInsights(logs);
   updatePanicHeartbeat(logs);
-}
-
-/* Radial 24-hour clock showing when attacks happen */
-function renderClockChart(logs) {
-  const labels = $("#clockLabels");
-  const bars = $("#clockBars");
-  const peak = $("#clockPeakLabel");
-  if (!labels || !bars) return;
-
-  // Bucket by hour 0-23
-  const buckets = new Array(24).fill(0);
-  logs.forEach((t) => {
-    const h = new Date(t).getHours();
-    buckets[h]++;
-  });
-  const max = Math.max(1, ...buckets);
-
-  // Peak hour
-  const peakHour = buckets.indexOf(max);
-  if (peak) {
-    if (logs.length > 0) {
-      peak.textContent = `Piek rond ${String(peakHour).padStart(2, "0")}:00`;
-    } else {
-      peak.textContent = "Nog geen data";
-    }
-  }
-
-  // Labels (every 3 hours)
-  labels.innerHTML = "";
-  for (let i = 0; i < 24; i++) {
-    if (i % 3 !== 0) continue;
-    const angle = (i / 24) * Math.PI * 2 - Math.PI / 2;
-    const r = 105;
-    const x = Math.cos(angle) * r;
-    const y = Math.sin(angle) * r;
-    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    label.setAttribute("x", x);
-    label.setAttribute("y", y);
-    label.setAttribute("class", "clock-label" + (i % 6 === 0 ? " major" : ""));
-    label.textContent = String(i).padStart(2, "0");
-    labels.appendChild(label);
-  }
-
-  // Bars — radial lines from inner ring to outer proportional to count
-  bars.innerHTML = "";
-  for (let i = 0; i < 24; i++) {
-    if (buckets[i] === 0) continue;
-    const angle = (i / 24) * Math.PI * 2 - Math.PI / 2;
-    const inner = 18;
-    const outer = 18 + (buckets[i] / max) * 70;
-    const x1 = Math.cos(angle) * inner;
-    const y1 = Math.sin(angle) * inner;
-    const x2 = Math.cos(angle) * outer;
-    const y2 = Math.sin(angle) * outer;
-    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-    line.setAttribute("x1", x1);
-    line.setAttribute("y1", y1);
-    line.setAttribute("x2", x2);
-    line.setAttribute("y2", y2);
-    line.setAttribute("class", "clock-bar");
-    const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
-    title.textContent = `${String(i).padStart(2, "0")}:00 — ${buckets[i]} aanval${buckets[i] === 1 ? "" : "len"}`;
-    line.appendChild(title);
-    bars.appendChild(line);
-  }
 }
 
 /* Apple Fitness–style activity ring: pain-free days this month */
@@ -1592,53 +1528,50 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-/* Notifications
- * Browsers cannot revoke OS permission from JS — once granted it's granted
- * at the system level. So we add an app-level mute toggle that suppresses
- * notifications even when permission is still granted. Stored in localStorage. */
+/* Notifications — clean iOS-style toggle.
+ * Browsers can't revoke OS permission from JS once granted, so we track an
+ * app-level mute flag in localStorage and the toggle switches that. */
 const NOTIF_MUTED_KEY = "hh_notifications_muted";
 const notifBtn = $("#enableNotif");
 const notifCard = $("#notifCard");
+const notifSub = $("#notifSub");
 const isNotifMuted = () => localStorage.getItem(NOTIF_MUTED_KEY) === "1";
 const setNotifMuted = (v) => v ? localStorage.setItem(NOTIF_MUTED_KEY, "1") : localStorage.removeItem(NOTIF_MUTED_KEY);
+const isNotifOn = () => ("Notification" in window) && Notification.permission === "granted" && !isNotifMuted();
 
 function updateNotifUi() {
   if (!("Notification" in window)) {
-    notifBtn.textContent = "Niet ondersteund";
     notifBtn.disabled = true;
+    notifBtn.setAttribute("aria-checked", "false");
+    if (notifSub) notifSub.textContent = "Niet ondersteund op dit apparaat";
     return;
   }
-  if (Notification.permission === "granted") {
-    if (isNotifMuted()) {
-      notifBtn.textContent = "Aanzetten";
-      notifCard.classList.remove("enabled");
-    } else {
-      notifBtn.textContent = "Aan ✓ — tik om uit";
-      notifCard.classList.add("enabled");
-    }
-  } else if (Notification.permission === "denied") {
-    notifBtn.textContent = "Geblokkeerd";
-  } else {
-    notifBtn.textContent = "Aanzetten";
+  if (Notification.permission === "denied") {
+    notifBtn.disabled = true;
+    notifBtn.setAttribute("aria-checked", "false");
+    if (notifSub) notifSub.textContent = "Geblokkeerd — zet aan in browser-instellingen";
+    return;
   }
+  const on = isNotifOn();
+  notifBtn.setAttribute("aria-checked", on ? "true" : "false");
+  notifCard.classList.toggle("enabled", on);
+  if (notifSub) notifSub.textContent = on
+    ? "Aan — je krijgt een melding bij nieuwe artikelen"
+    : "Krijg een tik wanneer de webmaster iets nieuws deelt.";
 }
+
 notifBtn.addEventListener("click", async () => {
-  if (!("Notification" in window)) return;
-  if (Notification.permission === "granted") {
-    // Toggle app-level mute
-    const nowMuted = !isNotifMuted();
-    setNotifMuted(nowMuted);
-    haptic("tabSwitch");
-    toast(nowMuted ? "Meldingen uit" : "Meldingen aan");
-  } else if (Notification.permission === "default") {
+  if (!("Notification" in window) || notifBtn.disabled) return;
+  if (Notification.permission === "default") {
     const p = await Notification.requestPermission();
     if (p === "granted") {
       setNotifMuted(false);
-      new Notification("Hammerhead HQ", { body: "Je krijgt nu meldingen bij nieuwe artikelen 🗿", icon: "icon.svg" });
+      try { new Notification("Hammerhead HQ", { body: "Meldingen staan aan 🗿", icon: "icon.svg" }); } catch (e) {}
     }
-  } else if (Notification.permission === "denied") {
-    toast("Meldingen staan geblokkeerd in Safari instellingen");
+  } else if (Notification.permission === "granted") {
+    setNotifMuted(!isNotifMuted());
   }
+  haptic("tabSwitch");
   updateNotifUi();
 });
 updateNotifUi();
