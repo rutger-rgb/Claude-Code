@@ -121,6 +121,147 @@ if (!sessionStorage.getItem("hh_logo_played")) {
   });
 }
 
+/* ===================================================================
+   HAPTIC CHOREOGRAPHY — different patterns per interaction
+   =================================================================== */
+const HAPTICS = {
+  tabSwitch: [5],
+  logAttack: [40, 60, 40, 60, 80],
+  undo: [20, 30, 20],
+  quoteRefresh: [3],
+  swipeDelete: [10, 20, 60],
+  easter: [20, 30, 20, 30, 20, 30, 100],
+  achievement: [30, 50, 30, 50, 30, 50, 150],
+};
+function haptic(name) {
+  if (navigator.vibrate && HAPTICS[name]) navigator.vibrate(HAPTICS[name]);
+}
+
+/* ===================================================================
+   SPLASH SCREEN — first load per session
+   =================================================================== */
+function showSplash() {
+  if (sessionStorage.getItem("hh_splash_seen")) return;
+  const splash = $("#splash");
+  if (!splash) return;
+  splash.hidden = false;
+  sessionStorage.setItem("hh_splash_seen", "1");
+  setTimeout(() => splash.remove(), 2500);
+}
+showSplash();
+
+/* ===================================================================
+   ONBOARDING — first visit ever
+   =================================================================== */
+function showOnboarding() {
+  if (localStorage.getItem("hh_onboarded")) return;
+  const ob = $("#onboarding");
+  if (!ob) return;
+  // Delay until after splash
+  setTimeout(() => {
+    ob.hidden = false;
+    let slide = 0;
+    const slides = ob.querySelectorAll(".onboard-slide");
+    const dots = ob.querySelectorAll(".onboard-dot");
+    const nextBtn = $("#onboardNext");
+
+    function go(n) {
+      slide = n;
+      slides.forEach((s, i) => s.classList.toggle("active", i === n));
+      dots.forEach((d, i) => d.classList.toggle("active", i === n));
+      nextBtn.textContent = n === slides.length - 1 ? "Aan de slag" : "Volgende";
+      haptic("tabSwitch");
+    }
+
+    nextBtn.addEventListener("click", () => {
+      if (slide < slides.length - 1) go(slide + 1);
+      else finish();
+    });
+    $("#onboardSkip").addEventListener("click", finish);
+
+    function finish() {
+      localStorage.setItem("hh_onboarded", "1");
+      ob.style.animation = "fadeIn .4s reverse";
+      setTimeout(() => ob.remove(), 400);
+      haptic("achievement");
+    }
+  }, 2200);
+}
+showOnboarding();
+
+/* ===================================================================
+   FAUX DYNAMIC ISLAND STATUS PILL
+   =================================================================== */
+let islandTimer;
+function island(text, duration = 3500) {
+  const pill = $("#islandPill");
+  if (!pill) return;
+  $("#islandText").textContent = text;
+  pill.hidden = false;
+  requestAnimationFrame(() => pill.classList.add("show"));
+  clearTimeout(islandTimer);
+  islandTimer = setTimeout(() => {
+    pill.classList.remove("show");
+    setTimeout(() => (pill.hidden = true), 600);
+  }, duration);
+}
+
+/* ===================================================================
+   EASTER EGGS
+   =================================================================== */
+// 10x tap on the bust → secret Nietzsche quote
+let bustTaps = 0;
+let bustTimer;
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#logoBtn")) return;
+  bustTaps++;
+  clearTimeout(bustTimer);
+  bustTimer = setTimeout(() => (bustTaps = 0), 3000);
+  if (bustTaps === 10) {
+    bustTaps = 0;
+    haptic("easter");
+    toast('"Hij die met monsters strijdt, moet ervoor zorgen dat hij daarbij niet zelf een monster wordt." — Friedrich Nietzsche', { duration: 6500 });
+  }
+});
+
+// Time-of-day greeting in the brand-sub (runs after sync)
+function applyTimeGreeting() {
+  const hour = new Date().getHours();
+  const day = new Date().getDay(); // 0 = Sunday
+  let greet = null;
+  if (day === 0 && hour >= 18) greet = "Maandagmorgen komt eraan";
+  else if (day === 5 && hour >= 15) greet = "Vrijdagmiddag. Je weet wel wat te doen.";
+  else if (hour < 6) greet = "Kan je niet slapen, Hammerhead?";
+  else if (hour < 12) greet = "Goedemorgen, Hammerhead";
+  else if (hour < 18) greet = "Goedemiddag, Hammerhead";
+  else greet = "Goedenavond, Hammerhead";
+  if (greet) {
+    const sub = $("#brand-sub");
+    if (sub && SYNC_ENABLED) sub.textContent = greet + " · ☁️";
+    else if (sub) sub.textContent = greet;
+  }
+}
+
+// 100th log achievement
+function checkAchievements(logCount) {
+  const milestones = [1, 10, 50, 100, 250, 500];
+  const reached = localStorage.getItem("hh_achievements") || "";
+  const reachedSet = new Set(reached.split(",").filter(Boolean).map(Number));
+  milestones.forEach((m) => {
+    if (logCount >= m && !reachedSet.has(m)) {
+      reachedSet.add(m);
+      setTimeout(() => {
+        haptic("achievement");
+        const msg = m === 1 ? "Eerste aanval gelogd" :
+                    m === 100 ? "100 aanvallen — een eeuw!" :
+                    `${m} aanvallen gelogd`;
+        island("🏆 " + msg, 5000);
+      }, 800);
+    }
+  });
+  localStorage.setItem("hh_achievements", Array.from(reachedSet).join(","));
+}
+
 /* ---------- Toast ---------- */
 const toastEl = $("#toast");
 let toastTimer;
@@ -179,7 +320,8 @@ panicBtn.addEventListener("click", () => {
   logs.push(now);
   saveLogs(logs);
   thunk();
-  if (navigator.vibrate) navigator.vibrate([40, 60, 40, 60, 80]);
+  haptic("logAttack");
+  checkAchievements(logs.length);
   panicBtn.animate(
     [{ transform: "scale(1)" }, { transform: "scale(0.86)" }, { transform: "scale(1.03)" }, { transform: "scale(1)" }],
     { duration: 400, easing: "ease-out" }
@@ -1161,10 +1303,12 @@ async function init() {
     renderMigraine();
     renderArticles();
     nextBlurb();
-    $("#brand-sub").textContent = "Filosoferen met de hamer · ☁️ gesynct";
+    applyTimeGreeting();
     subscribeArticleInserts(swReg);
+    // Dynamic island style confirmation
+    setTimeout(() => island("☁️ Gesynct met Supabase", 3000), 300);
   } else {
-    $("#brand-sub").textContent = "Filosoferen met de hamer — lokaal (geen sync)";
+    applyTimeGreeting();
   }
 }
 init();
