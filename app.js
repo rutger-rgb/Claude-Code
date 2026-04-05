@@ -3,6 +3,88 @@
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
+/* ===================================================================
+   SUPABASE SYNC LAYER
+   -----------------------------------------------------------------
+   localStorage blijft de synchrone lokale cache. Supabase is de
+   source of truth: op startup pullen we remote data in de cache,
+   en bij writes pushen we naar beide (local meteen, remote async).
+   Als Supabase niet geconfigureerd is, werkt de app gewoon lokaal.
+   =================================================================== */
+const supa = (() => {
+  const cfg = window.HH_CONFIG || {};
+  if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) return null;
+  if (!window.supabase) return null;
+  try {
+    return window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+  } catch (e) {
+    console.warn("Supabase init failed", e);
+    return null;
+  }
+})();
+
+const SYNC_ENABLED = !!supa;
+
+async function pullAll() {
+  if (!supa) return;
+  try {
+    const [mig, art, quo] = await Promise.all([
+      supa.from("migraines").select("id, ts").order("ts", { ascending: false }),
+      supa.from("articles").select("id, title, url, description, created_at").order("created_at", { ascending: false }),
+      supa.from("quotes").select("id, text, source, created_at").order("created_at", { ascending: false }),
+    ]);
+    if (!mig.error && mig.data) {
+      const timestamps = mig.data.map((r) => new Date(r.ts).getTime());
+      localStorage.setItem(LOG_KEY, JSON.stringify(timestamps));
+    }
+    if (!art.error && art.data) {
+      const arts = art.data.map((r) => ({
+        id: r.id,
+        title: r.title,
+        url: r.url,
+        desc: r.description || "",
+        ts: new Date(r.created_at).getTime(),
+      }));
+      localStorage.setItem(ART_KEY, JSON.stringify(arts));
+    }
+    if (!quo.error && quo.data) {
+      const quotes = quo.data.map((r) => ({ text: r.text, source: r.source }));
+      localStorage.setItem(CUSTOM_QUOTES_KEY, JSON.stringify(quotes));
+    }
+  } catch (e) {
+    console.warn("Supabase pull failed, using local cache", e);
+  }
+}
+
+async function pushMigraine(ts) {
+  if (!supa) return;
+  try {
+    await supa.from("migraines").insert({ ts: new Date(ts).toISOString() });
+  } catch (e) { console.warn("push migraine failed", e); }
+}
+async function pushDeleteAllMigraines() {
+  if (!supa) return;
+  try {
+    await supa.from("migraines").delete().not("id", "is", null);
+  } catch (e) { console.warn("delete migraines failed", e); }
+}
+async function pushArticle(a) {
+  if (!supa) return;
+  try {
+    await supa.from("articles").insert({
+      title: a.title,
+      url: a.url,
+      description: a.desc || null,
+    });
+  } catch (e) { console.warn("push article failed", e); }
+}
+async function pushQuote(q) {
+  if (!supa) return;
+  try {
+    await supa.from("quotes").insert({ text: q.text, source: q.source });
+  } catch (e) { console.warn("push quote failed", e); }
+}
+
 /* ---------- Tab navigation ---------- */
 $$(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -44,6 +126,7 @@ panicBtn.addEventListener("click", () => {
   );
   toast("Aanval gelogd. Sterkte Hammerhead 🦈");
   renderMigraine();
+  pushMigraine(now);
 });
 
 /* Migraine modus — dim alles behalve de rode knop */
@@ -70,6 +153,7 @@ $("#clearLogs").addEventListener("click", () => {
   saveLogs([]);
   renderMigraine();
   toast("Logs gewist.");
+  pushDeleteAllMigraines();
 });
 
 let chartRange = "year";
@@ -479,7 +563,8 @@ $("#addArticle").addEventListener("click", () => {
   const desc = $("#artDesc").value.trim();
   if (!title || !url) return toast("Titel en URL zijn verplicht");
   const arts = loadArticles();
-  arts.push({ id: "a" + Date.now(), title, url, desc, ts: Date.now() });
+  const newArt = { id: "a" + Date.now(), title, url, desc, ts: Date.now() };
+  arts.push(newArt);
   saveArticles(arts);
   $("#artTitle").value = "";
   $("#artUrl").value = "";
@@ -489,6 +574,7 @@ $("#addArticle").addEventListener("click", () => {
   }
   renderArticles();
   toast("Artikel gepubliceerd");
+  pushArticle(newArt);
 });
 $("#exitAdmin").addEventListener("click", () => ($("#adminPanel").hidden = true));
 $("#exitAdmin2").addEventListener("click", () => ($("#adminPanel").hidden = true));
@@ -509,12 +595,14 @@ $("#addQuote").addEventListener("click", () => {
   const source = $("#quoteSource").value.trim();
   if (!text || !source) return toast("Tekst en bron zijn verplicht");
   const quotes = loadCustomQuotes();
-  quotes.push({ text, source });
+  const newQ = { text, source };
+  quotes.push(newQ);
   saveCustomQuotes(quotes);
   BLURBS = buildBlurbs();
   $("#quoteText").value = "";
   $("#quoteSource").value = "";
   toast("Quote toegevoegd ✨");
+  pushQuote(newQ);
 });
 
 /* ===================================================================
@@ -602,9 +690,26 @@ $("#nextBlurb").addEventListener("click", nextBlurb);
 /* ===================================================================
    Init
    =================================================================== */
-renderMigraine();
-renderArticles();
-nextBlurb();
+async function init() {
+  // Render immediately from local cache for instant feel
+  renderMigraine();
+  renderArticles();
+  nextBlurb();
+
+  // Show sync status in subtitle
+  if (SYNC_ENABLED) {
+    $("#brand-sub").textContent = "Filosoferen met de hamer · ⏳ syncen…";
+    await pullAll();
+    BLURBS = buildBlurbs();
+    renderMigraine();
+    renderArticles();
+    nextBlurb();
+    $("#brand-sub").textContent = "Filosoferen met de hamer · ☁️ gesynct";
+  } else {
+    $("#brand-sub").textContent = "Filosoferen met de hamer — lokaal (geen sync)";
+  }
+}
+init();
 
 /* PWA: service worker for offline-lite (optional, graceful) */
 if ("serviceWorker" in navigator) {
