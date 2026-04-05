@@ -255,6 +255,35 @@ main { padding: 0 18px; }
 
 .funk-actions { display: flex; flex-direction: column; gap: 10px; }
 
+.spotify-embed {
+  margin: 0 0 14px;
+  min-height: 0;
+  transition: min-height .3s ease;
+}
+.spotify-embed iframe {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  display: block;
+}
+.spotify-embed.active { min-height: 80px; }
+
+/* Toast action button */
+.toast { display: flex; align-items: center; gap: 12px; }
+.toast-action {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 /* Buttons */
 .btn-primary {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));

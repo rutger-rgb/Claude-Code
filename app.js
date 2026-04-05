@@ -99,11 +99,45 @@ $$(".tab").forEach((tab) => {
 /* ---------- Toast ---------- */
 const toastEl = $("#toast");
 let toastTimer;
-function toast(msg) {
-  toastEl.textContent = msg;
+function toast(msg, opts = {}) {
+  toastEl.innerHTML = "";
+  const text = document.createElement("span");
+  text.textContent = msg;
+  toastEl.appendChild(text);
+  if (opts.actionLabel && opts.onAction) {
+    const btn = document.createElement("button");
+    btn.className = "toast-action";
+    btn.textContent = opts.actionLabel;
+    btn.addEventListener("click", () => {
+      opts.onAction();
+      toastEl.classList.remove("show");
+    });
+    toastEl.appendChild(btn);
+  }
   toastEl.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2200);
+  toastTimer = setTimeout(() => toastEl.classList.remove("show"), opts.duration || 2200);
+}
+
+/* ---------- Audio: subtle "thunk" sound via Web Audio API ---------- */
+let audioCtx = null;
+function thunk() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.exponentialRampToValueAtTime(55, now + 0.18);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.5, now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.25);
+  } catch (e) {}
 }
 
 /* ===================================================================
@@ -119,14 +153,29 @@ panicBtn.addEventListener("click", () => {
   const now = Date.now();
   logs.push(now);
   saveLogs(logs);
-  if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
+  thunk();
+  if (navigator.vibrate) navigator.vibrate([40, 60, 40, 60, 80]);
   panicBtn.animate(
-    [{ transform: "scale(1)" }, { transform: "scale(0.88)" }, { transform: "scale(1.02)" }, { transform: "scale(1)" }],
-    { duration: 360, easing: "ease-out" }
+    [{ transform: "scale(1)" }, { transform: "scale(0.86)" }, { transform: "scale(1.03)" }, { transform: "scale(1)" }],
+    { duration: 400, easing: "ease-out" }
   );
-  toast("Aanval gelogd. Sterkte Hammerhead 🦈");
   renderMigraine();
   pushMigraine(now);
+  toast("Aanval gelogd. Sterkte Hammerhead 🗿", {
+    actionLabel: "Ongedaan",
+    duration: 5000,
+    onAction: () => {
+      const cur = loadLogs();
+      const idx = cur.lastIndexOf(now);
+      if (idx >= 0) cur.splice(idx, 1);
+      saveLogs(cur);
+      renderMigraine();
+      if (supa) {
+        supa.from("migraines").delete().eq("ts", new Date(now).toISOString()).then(() => {});
+      }
+      toast("Ongedaan gemaakt");
+    },
+  });
 });
 
 /* Handmatig loggen op eerder tijdstip */
@@ -461,6 +510,10 @@ $("#funkBtn").addEventListener("click", () => {
   btn.href = "https://open.spotify.com/track/" + track.id;
   btn.setAttribute("aria-disabled", "false");
   vinyl.classList.add("playing");
+  // Embed the Spotify player directly so playback happens in-app
+  const embed = $("#spotifyEmbed");
+  embed.innerHTML = `<iframe src="https://open.spotify.com/embed/track/${track.id}?utm_source=generator&theme=0" height="152" frameborder="0" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
+  embed.classList.add("active");
   if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
   toast("🎶 " + track.title);
 });
@@ -715,6 +768,70 @@ function nextBlurb() {
 $("#nextBlurb").addEventListener("click", nextBlurb);
 
 /* ===================================================================
+   Service worker + realtime article notifications
+   =================================================================== */
+async function registerSW() {
+  if (!("serviceWorker" in navigator)) return null;
+  try {
+    const reg = await navigator.serviceWorker.register("./sw.js");
+    navigator.serviceWorker.addEventListener("message", (e) => {
+      if (e.data && e.data.type === "open-articles") {
+        $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.view === "view-articles"));
+        $$(".view").forEach((v) => v.classList.toggle("active", v.id === "view-articles"));
+      }
+    });
+    return reg;
+  } catch (e) {
+    console.warn("SW register failed", e);
+    return null;
+  }
+}
+
+async function showArticleNotification(article, swReg) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  const opts = {
+    body: article.title + (article.description ? " — " + article.description : ""),
+    icon: "icon.svg",
+    badge: "icon.svg",
+    tag: "article-" + article.id,
+    data: { url: "./#articles", id: article.id },
+  };
+  try {
+    if (swReg && swReg.showNotification) {
+      await swReg.showNotification("Nieuw artikel voor Hammerhead 📰", opts);
+    } else {
+      new Notification("Nieuw artikel voor Hammerhead 📰", opts);
+    }
+  } catch (e) { console.warn("notify failed", e); }
+}
+
+function subscribeArticleInserts(swReg) {
+  if (!supa) return;
+  // Track article IDs we've already seen so we don't notify for our own inserts
+  supa
+    .channel("public:articles")
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "articles" }, (payload) => {
+      const a = payload.new;
+      // Merge into local cache
+      const arts = loadArticles();
+      if (!arts.find((x) => x.id === a.id)) {
+        arts.push({
+          id: a.id,
+          title: a.title,
+          url: a.url,
+          desc: a.description || "",
+          ts: new Date(a.created_at).getTime(),
+        });
+        saveArticles(arts);
+        renderArticles();
+        showArticleNotification(a, swReg);
+        toast("📰 Nieuw artikel: " + a.title, { duration: 4000 });
+      }
+    })
+    .subscribe();
+}
+
+/* ===================================================================
    Init
    =================================================================== */
 async function init() {
@@ -722,6 +839,8 @@ async function init() {
   renderMigraine();
   renderArticles();
   nextBlurb();
+
+  const swReg = await registerSW();
 
   // Show sync status in subtitle
   if (SYNC_ENABLED) {
@@ -732,6 +851,7 @@ async function init() {
     renderArticles();
     nextBlurb();
     $("#brand-sub").textContent = "Filosoferen met de hamer · ☁️ gesynct";
+    subscribeArticleInserts(swReg);
   } else {
     $("#brand-sub").textContent = "Filosoferen met de hamer — lokaal (geen sync)";
   }

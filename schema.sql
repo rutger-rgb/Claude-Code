@@ -56,3 +56,9 @@ drop policy if exists "anon insert quotes" on quotes;
 
 create policy "anon read quotes"   on quotes for select to anon using (true);
 create policy "anon insert quotes" on quotes for insert to anon with check (true);
+
+-- ============================================================
+-- REALTIME: stream article inserts to connected clients
+-- (so Jurriën gets live notifications when webmaster publishes)
+-- ============================================================
+alter publication supabase_realtime add table articles;
