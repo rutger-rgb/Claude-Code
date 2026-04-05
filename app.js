@@ -164,12 +164,58 @@ $$(".tab").forEach((tab) => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 });
-// Wire up Instapaper link from config
-const instapaperUrl = (window.HH_CONFIG && window.HH_CONFIG.INSTAPAPER_URL) || "";
-const instapaperEl = document.getElementById("instapaperCard");
-if (instapaperEl && instapaperUrl) {
-  instapaperEl.href = instapaperUrl;
+/* Instapaper card acts as a sync button */
+function relTimeNL(ts) {
+  const diff = Math.max(0, Date.now() - ts);
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "net";
+  if (mins < 60) return mins + " min geleden";
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + " uur geleden";
+  return Math.floor(hrs / 24) + " dagen geleden";
 }
+function updateInstapaperStatus() {
+  const el = document.getElementById("instapaperStatus");
+  if (!el) return;
+  const cache = loadInstapaperCache();
+  if (cache && cache.items) {
+    const n = cache.items.length;
+    el.textContent = `${n} ${n === 1 ? "artikel" : "artikelen"} · ${relTimeNL(cache.ts)}`;
+  } else {
+    el.textContent = "Tik om te syncen";
+  }
+}
+
+async function syncInstapaperNow() {
+  const card = document.getElementById("instapaperCard");
+  const status = document.getElementById("instapaperStatus");
+  if (!card) return;
+  card.classList.add("syncing");
+  if (status) status.textContent = "Syncen…";
+  haptic("tabSwitch");
+  // Force fresh fetch
+  localStorage.removeItem(INSTAPAPER_CACHE_KEY);
+  const items = await fetchInstapaperFeed();
+  card.classList.remove("syncing");
+  if (items && items.length > 0) {
+    renderArticles();
+    updateInstapaperStatus();
+    toast(`📖 ${items.length} artikelen gesynct`);
+  } else {
+    if (status) status.textContent = "Geen artikelen gevonden";
+    toast("Sync mislukt — probeer later opnieuw");
+  }
+}
+
+const instapaperEl = document.getElementById("instapaperCard");
+if (instapaperEl) {
+  instapaperEl.addEventListener("click", (e) => {
+    e.preventDefault();
+    syncInstapaperNow();
+  });
+}
+// Initial status line based on cache
+updateInstapaperStatus();
 
 /* ===================================================================
    INSTAPAPER AUTO-SYNC via public profile scrape
@@ -1913,6 +1959,7 @@ async function init() {
 
   // Kick off Instapaper feed sync (non-blocking)
   fetchInstapaperFeed().then((items) => {
+    updateInstapaperStatus();
     if (items && items.length) {
       renderArticles();
       island(`📖 ${items.length} Instapaper artikelen`, 3500);

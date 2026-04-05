@@ -594,6 +594,8 @@ main { padding: 0 18px; }
 .instapaper-card {
   position: relative;
   display: block;
+  width: 100%;
+  text-align: left;
   text-decoration: none;
   color: var(--text);
   background: linear-gradient(145deg, #2d1f0f 0%, #1a1208 100%);
@@ -602,14 +604,21 @@ main { padding: 0 18px; }
   padding: 22px;
   margin: 4px 0 18px;
   overflow: hidden;
+  font-family: inherit;
+  cursor: pointer;
   transition: transform .4s var(--spring), border-color .3s var(--ease-smooth), box-shadow .4s var(--ease-smooth);
   box-shadow: 0 14px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(232, 160, 84, 0.18);
 }
-.instapaper-card:hover,
-.instapaper-card:active {
+.instapaper-card:hover {
   transform: translateY(-3px) scale(1.01);
   border-color: rgba(232, 160, 84, 0.6);
   box-shadow: 0 24px 60px rgba(232, 160, 84, 0.2), inset 0 1px 0 rgba(232, 160, 84, 0.3);
+}
+.instapaper-card:active {
+  transform: translateY(-1px) scale(0.995);
+}
+.instapaper-card.syncing {
+  border-color: rgba(232, 160, 84, 0.8);
 }
 .instapaper-glow {
   position: absolute;
@@ -661,13 +670,39 @@ main { padding: 0 18px; }
   line-height: 1.4;
   color: rgba(255, 255, 255, 0.75);
 }
-.instapaper-arrow {
-  font-size: 22px;
-  color: rgba(232, 160, 84, 0.7);
-  flex-shrink: 0;
-  transition: transform .4s var(--spring);
+.instapaper-status {
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(232, 160, 84, 0.75);
+  font-weight: 600;
 }
-.instapaper-card:hover .instapaper-arrow { transform: translate(3px, -3px) scale(1.1); }
+.instapaper-card.syncing .instapaper-status {
+  color: rgba(232, 160, 84, 1);
+}
+.instapaper-arrow {
+  font-size: 28px;
+  color: rgba(232, 160, 84, 0.8);
+  flex-shrink: 0;
+  align-self: center;
+  transition: transform .4s var(--spring), color .3s var(--ease-smooth);
+  line-height: 1;
+  display: inline-block;
+}
+.instapaper-card:hover .instapaper-arrow {
+  transform: rotate(60deg);
+  color: rgba(232, 160, 84, 1);
+}
+.instapaper-card.syncing .instapaper-arrow {
+  animation: instapaperSpin 1s linear infinite;
+  color: rgba(232, 160, 84, 1);
+}
+@keyframes instapaperSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 
 .notif-card {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
