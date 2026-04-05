@@ -647,7 +647,29 @@ main { padding: 0 18px; }
 }
 .article-list a { color: var(--text); text-decoration: none; font-weight: 700; font-size: 16px; }
 .article-list .desc { color: var(--muted); font-size: 13px; margin-top: 4px; }
-.article-list .meta { color: var(--muted); font-size: 11px; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+.article-list .meta {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: rgba(232, 160, 84, 0.15);
+  color: rgba(232, 160, 84, 0.9);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: none;
+}
 .article-list .new-badge {
   display: inline-block;
   background: var(--accent);

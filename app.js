@@ -171,6 +171,65 @@ if (instapaperEl && instapaperUrl) {
   instapaperEl.href = instapaperUrl;
 }
 
+/* ===================================================================
+   INSTAPAPER RSS AUTO-SYNC
+   -----------------------------------------------------------------
+   Fetches the user's personal Instapaper RSS feed (Liked/Unread/folder)
+   via rss2json.com (free CORS-friendly proxy) and renders items as
+   articles. Cached for 10 minutes in localStorage to avoid hammering.
+   =================================================================== */
+const INSTAPAPER_CACHE_KEY = "hh_instapaper_cache_v1";
+const INSTAPAPER_TTL = 10 * 60 * 1000; // 10 minutes
+
+function loadInstapaperCache() {
+  try {
+    const raw = localStorage.getItem(INSTAPAPER_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.ts || !parsed.items) return null;
+    return parsed;
+  } catch (e) { return null; }
+}
+
+function stripHtml(s) {
+  if (!s) return "";
+  const div = document.createElement("div");
+  div.innerHTML = s;
+  return (div.textContent || "").trim().replace(/\s+/g, " ").slice(0, 240);
+}
+
+async function fetchInstapaperFeed() {
+  const rssUrl = window.HH_CONFIG && window.HH_CONFIG.INSTAPAPER_RSS_URL;
+  if (!rssUrl) return null;
+
+  // Use cached if recent
+  const cached = loadInstapaperCache();
+  const now = Date.now();
+  if (cached && now - cached.ts < INSTAPAPER_TTL) return cached.items;
+
+  try {
+    const api = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+    const res = await fetch(api);
+    if (!res.ok) throw new Error("rss2json returned " + res.status);
+    const data = await res.json();
+    if (data.status !== "ok" || !Array.isArray(data.items)) throw new Error("bad response");
+    const items = data.items.map((it) => ({
+      id: "ip-" + (it.guid || it.link),
+      title: it.title || "(geen titel)",
+      url: it.link,
+      desc: stripHtml(it.description) || "",
+      ts: it.pubDate ? new Date(it.pubDate).getTime() : Date.now(),
+      source: "instapaper",
+    }));
+    localStorage.setItem(INSTAPAPER_CACHE_KEY, JSON.stringify({ ts: now, items }));
+    return items;
+  } catch (e) {
+    console.warn("Instapaper feed fetch failed", e);
+    if (cached) return cached.items; // stale fallback
+    return null;
+  }
+}
+
 // Handle manifest shortcut params (?shortcut=log/funk/ego/articles)
 const SHORTCUT_MAP = {
   log: "view-migraine",
@@ -270,21 +329,36 @@ function haptic(name) {
 /* ===================================================================
    SPLASH SCREEN — first load per session
    =================================================================== */
+function dismissSplash() {
+  const splash = document.getElementById("splash");
+  if (!splash) return;
+  splash.style.transition = "opacity .4s";
+  splash.style.opacity = "0";
+  splash.style.pointerEvents = "none";
+  setTimeout(() => splash.remove(), 400);
+}
+window.dismissSplash = dismissSplash;
+
 function showSplash() {
   if (sessionStorage.getItem("hh_splash_seen")) return;
-  const splash = $("#splash");
+  const splash = document.getElementById("splash");
   if (!splash) return;
   splash.hidden = false;
   sessionStorage.setItem("hh_splash_seen", "1");
-  const remove = () => splash.remove();
-  setTimeout(remove, 5100);
-  const skip = document.getElementById("splashSkip");
-  if (skip) skip.addEventListener("click", () => {
-    splash.style.animation = "splashFade 0.4s forwards";
-    setTimeout(remove, 400);
-  });
+  setTimeout(() => {
+    if (document.getElementById("splash")) splash.remove();
+  }, 5100);
 }
 showSplash();
+
+// Document-level delegation for splash skip (survives any timing issue)
+document.addEventListener("click", (e) => {
+  if (e.target.closest("#splashSkip")) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    dismissSplash();
+  }
+}, true);
 
 /* ===================================================================
    ONBOARDING — first visit ever
@@ -1375,10 +1449,24 @@ function updateAppBadge() {
   } catch (e) {}
 }
 
+function getMergedArticles() {
+  const own = loadArticles().filter((a) => !DEPRECATED_ARTICLE_TITLES.includes(a.title));
+  const ipCached = loadInstapaperCache();
+  const ip = ipCached && ipCached.items ? ipCached.items : [];
+  // Dedupe by URL
+  const seen = new Set();
+  const merged = [];
+  [...own, ...ip].forEach((a) => {
+    const key = a.url || a.id;
+    if (seen.has(key)) return;
+    seen.add(key);
+    merged.push(a);
+  });
+  return merged.sort((a, b) => b.ts - a.ts);
+}
+
 function renderArticles() {
-  const arts = loadArticles()
-    .filter((a) => !DEPRECATED_ARTICLE_TITLES.includes(a.title))
-    .sort((a, b) => b.ts - a.ts);
+  const arts = getMergedArticles();
   const seen = loadSeen();
   const list = $("#articleList");
   list.innerHTML = "";
@@ -1386,10 +1474,11 @@ function renderArticles() {
   arts.forEach((a) => {
     const li = document.createElement("li");
     const isNew = !seen.includes(a.id);
+    const sourceBadge = a.source === "instapaper" ? '<span class="source-badge">📖 Instapaper</span>' : "";
     li.innerHTML = `
       <a href="${a.url}" target="_blank" rel="noopener">${escapeHtml(a.title)}${isNew ? '<span class="new-badge">NIEUW</span>' : ""}</a>
       <div class="desc">${escapeHtml(a.desc || "")}</div>
-      <div class="meta">${new Date(a.ts).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })}</div>
+      <div class="meta">${new Date(a.ts).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })}${sourceBadge}</div>
     `;
     list.appendChild(li);
   });
@@ -1707,6 +1796,14 @@ async function init() {
   } else {
     applyTimeGreeting();
   }
+
+  // Kick off Instapaper feed sync (non-blocking)
+  fetchInstapaperFeed().then((items) => {
+    if (items && items.length) {
+      renderArticles();
+      island(`📖 ${items.length} Instapaper artikelen`, 3500);
+    }
+  });
 }
 init();
 
