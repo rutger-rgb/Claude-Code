@@ -1542,11 +1542,12 @@ const saveSeen = (arr) => localStorage.setItem(SEEN_KEY, JSON.stringify(arr));
 function updateAppBadge() {
   try {
     if (!("setAppBadge" in navigator)) return;
-    const arts = loadArticles();
+    // Use merged+filtered list so deprecated seed articles don't get counted
+    const arts = getMergedArticles();
     const seen = new Set(loadSeen());
     const unread = arts.filter((a) => !seen.has(a.id)).length;
     if (unread > 0) navigator.setAppBadge(unread);
-    else navigator.clearAppBadge && navigator.clearAppBadge();
+    else if (navigator.clearAppBadge) navigator.clearAppBadge();
   } catch (e) {}
 }
 
