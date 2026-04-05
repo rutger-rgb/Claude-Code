@@ -11,5 +11,5 @@ window.HH_CONFIG = {
   SUPABASE_URL: "https://ryknakhvromgjpkmeccr.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_CWVHYWFXNwRQWnIfSgCBNg_0xDfHNbd",
   // Instapaper-profiel van de webmaster (bevestig/corrigeer deze URL als nodig)
-  INSTAPAPER_URL: "https://www.instapaper.com/p/rutgerbregman",
+  INSTAPAPER_URL: "https://www.instapaper.com/p/brrrtttssss",
 };
