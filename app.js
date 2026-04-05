@@ -179,7 +179,7 @@ if (instapaperEl && instapaperUrl) {
    the Leesvoer tab. Cached 10 minutes in localStorage. No RSS token
    needed — just the public profile URL in config.js.
    =================================================================== */
-const INSTAPAPER_CACHE_KEY = "hh_instapaper_cache_v2";
+const INSTAPAPER_CACHE_KEY = "hh_instapaper_cache_v3";
 const INSTAPAPER_TTL = 10 * 60 * 1000; // 10 minutes
 
 function loadInstapaperCache() {
