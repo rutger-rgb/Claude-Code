@@ -382,8 +382,18 @@ $("#exitAdmin").addEventListener("click", () => ($("#adminPanel").hidden = true)
  * REAL_QUOTES array (met bron + link indien mogelijk).
  */
 const REAL_QUOTES = [
-  // Voeg hier echte, geverifieerde citaten toe over Jurriën Hamer.
-  // Formaat: { text: "...", source: "Bron, jaar" }
+  {
+    text: "Aangezien dit laatste op uiterst elegante en heldere wijze wordt beschreven in Waarom schurken pech hebben en helden geluk heeft de jury voor Jurriën Hamer gekozen als winnaar van de Socratesbeker 2021.",
+    source: "Jury Socrates Wisselbeker 2022",
+  },
+  {
+    text: "Een onderbouwd en oprecht pleidooi voor een menselijker strafrecht en grotere maatschappelijke gelijkheid.",
+    source: "Jury Socrates Wisselbeker 2022",
+  },
+  {
+    text: "Zijn bespiegelingen over rechtvaardigheid en waardigheid zijn aantrekkelijk en overtuigend.",
+    source: "Het Financieele Dagblad",
+  },
 ];
 
 const BREGMAN_BLURBS = [
