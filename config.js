@@ -8,6 +8,6 @@
  * (per-device opslag, geen sync tussen telefoons).
  */
 window.HH_CONFIG = {
-  SUPABASE_URL: "",
-  SUPABASE_ANON_KEY: "",
+  SUPABASE_URL: "https://ryknakhvromgjpkmeccr.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_CWVHYWFXNwRQWnIfSgCBNg_0xDfHNbd",
 };
