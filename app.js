@@ -25,32 +25,32 @@ const supa = (() => {
 
 const SYNC_ENABLED = !!supa;
 
-/* One-time seed of default articles into Supabase if the table is empty.
- * Preserves the curated order by inserting in reverse with small delays,
- * so the "most important" entry gets the newest created_at and floats to top. */
-async function seedArticlesIfEmpty() {
+/* One-time migration: clear the previously-seeded "greatest hits" articles
+ * so only webmaster-published items remain, since the Leesvoer tab now
+ * primarily points to Instapaper. Runs once ever. */
+async function migrateClearSeededArticles() {
   if (!supa) return;
-  if (localStorage.getItem("hh_articles_seeded_v2")) return;
+  if (localStorage.getItem("hh_articles_migration_v3")) return;
   try {
-    const { data, error } = await supa.from("articles").select("id").limit(1);
-    if (error) return;
-    if (data && data.length > 0) {
-      localStorage.setItem("hh_articles_seeded_v2", "1");
-      return;
+    // Delete any article whose title matches one of the old seed titles
+    const seedTitles = [
+      "BBC Reith Lectures 2025 — Moral Revolution",
+      "Why Europe Needs Ukraine — The Atlantic",
+      "Abolish the Tobacco Industry",
+      "De Davos-moment — 'Taxes, taxes, taxes'",
+      "Moral Ambition — de eerste voorpublicatie",
+      "Poverty Isn't a Lack of Character, It's a Lack of Cash",
+      "Post-Davos Weekend Interview — Bloomberg",
+      "From Taxing the Rich to Moral Ambition — CNN",
+      "Welkom in Hammerhead HQ",
+    ];
+    for (const title of seedTitles) {
+      await supa.from("articles").delete().eq("title", title);
     }
-    // Insert in reverse order (least important first) so most important gets newest timestamp
-    const reversed = [...DEFAULT_ARTICLES].reverse();
-    for (const a of reversed) {
-      await supa.from("articles").insert({
-        title: a.title,
-        url: a.url,
-        description: a.desc,
-      });
-      await new Promise((r) => setTimeout(r, 15));
-    }
-    localStorage.setItem("hh_articles_seeded_v2", "1");
+    localStorage.setItem("hh_articles_migration_v3", "1");
+    localStorage.setItem("hh_articles_seeded_v2", "1"); // prevent re-seeding
   } catch (e) {
-    console.warn("seed articles failed", e);
+    console.warn("migrate articles failed", e);
   }
 }
 
@@ -163,6 +163,13 @@ $$(".tab").forEach((tab) => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 });
+// Wire up Instapaper link from config
+const instapaperUrl = (window.HH_CONFIG && window.HH_CONFIG.INSTAPAPER_URL) || "";
+const instapaperEl = document.getElementById("instapaperCard");
+if (instapaperEl && instapaperUrl) {
+  instapaperEl.href = instapaperUrl;
+}
+
 // Handle manifest shortcut params (?shortcut=log/funk/ego/articles)
 const SHORTCUT_MAP = {
   log: "view-migraine",
@@ -1684,7 +1691,7 @@ async function init() {
   // Show sync status in subtitle
   if (SYNC_ENABLED) {
     $("#brand-sub").textContent = "Filosoferen met de hamer · ⏳ syncen…";
-    await seedArticlesIfEmpty();
+    await migrateClearSeededArticles();
     await pullAll();
     BLURBS = buildBlurbs();
     renderMigraine();
