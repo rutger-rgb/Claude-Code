@@ -164,66 +164,13 @@ $$(".tab").forEach((tab) => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 });
-/* Instapaper card acts as a sync button */
-function relTimeNL(ts) {
-  const diff = Math.max(0, Date.now() - ts);
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "net";
-  if (mins < 60) return mins + " min geleden";
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return hrs + " uur geleden";
-  return Math.floor(hrs / 24) + " dagen geleden";
-}
-function updateInstapaperStatus() {
-  const el = document.getElementById("instapaperStatus");
-  if (!el) return;
-  const cache = loadInstapaperCache();
-  if (cache && cache.items) {
-    const n = cache.items.length;
-    el.textContent = `${n} ${n === 1 ? "artikel" : "artikelen"} · ${relTimeNL(cache.ts)}`;
-  } else {
-    el.textContent = "Tik om te syncen";
-  }
-}
-
-async function syncInstapaperNow() {
-  const card = document.getElementById("instapaperCard");
-  const status = document.getElementById("instapaperStatus");
-  if (!card) return;
-  card.classList.add("syncing");
-  if (status) status.textContent = "Syncen…";
-  haptic("tabSwitch");
-  // Force fresh fetch — clears cache, bypasses proxy cache via cb param
-  localStorage.removeItem(INSTAPAPER_CACHE_KEY);
-  const items = await fetchInstapaperFeed(true);
-  card.classList.remove("syncing");
-  if (items && items.length > 0) {
-    renderArticles();
-    updateInstapaperStatus();
-    toast(`📖 ${items.length} artikelen gesynct`);
-  } else {
-    if (status) status.textContent = "Geen artikelen gevonden";
-    toast("Sync mislukt — probeer later opnieuw");
-  }
-}
-
-const instapaperEl = document.getElementById("instapaperCard");
-if (instapaperEl) {
-  instapaperEl.addEventListener("click", (e) => {
-    e.preventDefault();
-    syncInstapaperNow();
-  });
-}
-// Initial status line based on cache
-updateInstapaperStatus();
-
 /* ===================================================================
    INSTAPAPER AUTO-SYNC via public profile scrape
    -----------------------------------------------------------------
    Fetches the user's Instapaper public profile page through a CORS
    proxy, parses the HTML for article entries, and renders them in
-   the Leesvoer tab. Cached 10 minutes in localStorage. No RSS token
-   needed — just the public profile URL in config.js.
+   the Leesvoer tab. Cached 10 minutes in localStorage. Click on the
+   card to force a fresh sync (bypasses caches via cb query param).
    =================================================================== */
 const INSTAPAPER_CACHE_KEY = "hh_instapaper_cache_v5";
 const INSTAPAPER_TTL = 10 * 60 * 1000; // 10 minutes
@@ -383,6 +330,59 @@ async function fetchInstapaperFeed(force = false) {
     return null;
   }
 }
+
+/* Instapaper card acts as a sync button */
+function relTimeNL(ts) {
+  const diff = Math.max(0, Date.now() - ts);
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "net";
+  if (mins < 60) return mins + " min geleden";
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + " uur geleden";
+  return Math.floor(hrs / 24) + " dagen geleden";
+}
+function updateInstapaperStatus() {
+  const el = document.getElementById("instapaperStatus");
+  if (!el) return;
+  const cache = loadInstapaperCache();
+  if (cache && cache.items) {
+    const n = cache.items.length;
+    el.textContent = `${n} ${n === 1 ? "artikel" : "artikelen"} · ${relTimeNL(cache.ts)}`;
+  } else {
+    el.textContent = "Tik om te syncen";
+  }
+}
+
+async function syncInstapaperNow() {
+  const card = document.getElementById("instapaperCard");
+  const status = document.getElementById("instapaperStatus");
+  if (!card) return;
+  card.classList.add("syncing");
+  if (status) status.textContent = "Syncen…";
+  haptic("tabSwitch");
+  // Force fresh fetch — clears cache, bypasses proxy cache via cb param
+  localStorage.removeItem(INSTAPAPER_CACHE_KEY);
+  const items = await fetchInstapaperFeed(true);
+  card.classList.remove("syncing");
+  if (items && items.length > 0) {
+    renderArticles();
+    updateInstapaperStatus();
+    toast(`📖 ${items.length} artikelen gesynct`);
+  } else {
+    if (status) status.textContent = "Geen artikelen gevonden";
+    toast("Sync mislukt — probeer later opnieuw");
+  }
+}
+
+const instapaperEl = document.getElementById("instapaperCard");
+if (instapaperEl) {
+  instapaperEl.addEventListener("click", (e) => {
+    e.preventDefault();
+    syncInstapaperNow();
+  });
+}
+// Initial status line based on cache — now safe because INSTAPAPER_CACHE_KEY is declared above
+updateInstapaperStatus();
 
 // Handle manifest shortcut params (?shortcut=log/funk/ego/articles)
 const SHORTCUT_MAP = {
@@ -1269,105 +1269,6 @@ function formatRelative(ts) {
   return new Date(ts).toLocaleDateString("nl-NL");
 }
 
-/* Legacy bar chart — replaced by heatmap, kept dead for now */
-function _renderChart_deprecated() {
-  const canvas = $("#chart");
-  const ctx = canvas.getContext("2d");
-  const dpr = window.devicePixelRatio || 1;
-  const cssW = canvas.clientWidth;
-  const cssH = 180;
-  canvas.width = cssW * dpr;
-  canvas.height = cssH * dpr;
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, cssW, cssH);
-
-  const logs = loadLogs();
-  const now = new Date();
-
-  let buckets = [];
-  let labels = [];
-
-  if (chartRange === "year") {
-    const year = now.getFullYear();
-    const monthNames = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
-    for (let i = 0; i < 12; i++) {
-      buckets.push(0);
-      labels.push(monthNames[i]);
-    }
-    logs.forEach((t) => {
-      const d = new Date(t);
-      if (d.getFullYear() === year) buckets[d.getMonth()]++;
-    });
-  } else {
-    // last 12 months rolling
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      buckets.push(0);
-      labels.push(d.toLocaleDateString("nl-NL", { month: "short" })[0].toUpperCase());
-    }
-    const start = new Date(now.getFullYear(), now.getMonth() - 11, 1).getTime();
-    logs.forEach((t) => {
-      if (t < start) return;
-      const d = new Date(t);
-      const idx = (d.getFullYear() - now.getFullYear()) * 12 + (d.getMonth() - now.getMonth()) + 11;
-      if (idx >= 0 && idx < 12) buckets[idx]++;
-    });
-  }
-
-  const max = Math.max(4, ...buckets);
-  const padL = 24, padR = 8, padT = 16, padB = 28;
-  const w = cssW - padL - padR;
-  const h = cssH - padT - padB;
-  const barW = w / buckets.length;
-
-  // grid
-  ctx.strokeStyle = "rgba(255,255,255,0.06)";
-  ctx.lineWidth = 1;
-  for (let g = 0; g <= 4; g++) {
-    const y = padT + (h * g) / 4;
-    ctx.beginPath();
-    ctx.moveTo(padL, y);
-    ctx.lineTo(padL + w, y);
-    ctx.stroke();
-  }
-
-  // bars
-  buckets.forEach((v, i) => {
-    const barH = (v / max) * h;
-    const x = padL + i * barW + barW * 0.15;
-    const y = padT + h - barH;
-    const bw = barW * 0.7;
-
-    const grad = ctx.createLinearGradient(0, y, 0, y + barH);
-    grad.addColorStop(0, "#ff6b9d");
-    grad.addColorStop(1, "#ff2d55");
-    ctx.fillStyle = v > 0 ? grad : "rgba(255,255,255,0.05)";
-    roundRect(ctx, x, y, bw, Math.max(barH, 2), 4);
-    ctx.fill();
-
-    ctx.fillStyle = "#8b8b96";
-    ctx.font = "10px -apple-system, system-ui, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(labels[i], x + bw / 2, cssH - 10);
-
-    if (v > 0) {
-      ctx.fillStyle = "#f5f5f7";
-      ctx.font = "bold 10px -apple-system, system-ui, sans-serif";
-      ctx.fillText(v, x + bw / 2, y - 4);
-    }
-  });
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
 window.addEventListener("resize", renderHeatmap);
 
 /* ===================================================================
@@ -1465,78 +1366,10 @@ async function fetchAlbumColors(trackId) {
 const ART_KEY = "hh_articles_v1";
 const SEEN_KEY = "hh_articles_seen_v1";
 
-/*
- * Curated "Greatest Hits" van de webmaster (Rutger Bregman).
- * Volgorde = belangrijkheid (meest prestigieus bovenaan). Bij het seeden
- * in Supabase draaien we de lijst om zodat de belangrijkste het nieuwste
- * created_at krijgt en dus bovenaan in de lijst verschijnt.
- */
-const DEFAULT_ARTICLES = [
-  {
-    id: "seed-reith",
-    title: "BBC Reith Lectures 2025 — Moral Revolution",
-    url: "https://www.bbc.co.uk/programmes/m002jzks",
-    desc: "Vier lezingen in Londen, Liverpool, Edinburgh en Stanford over hoe kleine groepen gedreven mensen (abolitionisten, suffragettes) de wereld hebben veranderd. De BBC censureerde één zin over Trump — dat gaf alleen maar meer publiciteit.",
-    ts: Date.now() - 1000,
-  },
-  {
-    id: "seed-atlantic",
-    title: "Why Europe Needs Ukraine — The Atlantic",
-    url: "https://www.theatlantic.com/ideas/archive/2022/04/europe-needs-ukraine/629356/",
-    desc: "Mijn debuut in The Atlantic, geschreven na gesprekken met jonge Oekraïners in Kiev in oktober 2021. Een pleidooi voor EU-lidmaatschap. Kwam net op tijd uit.",
-    ts: Date.now() - 2000,
-  },
-  {
-    id: "seed-tobacco",
-    title: "Abolish the Tobacco Industry",
-    url: "https://www.moralambition.org/stories/abolish-the-tobacco-industry",
-    desc: "Het 'deadliest artifact in human history' — nog steeds acht miljoen doden per jaar. Niemand zou anderen op industriële schaal mogen verslaven en vergiftigen. Origineel op The Correspondent.",
-    ts: Date.now() - 3000,
-  },
-  {
-    id: "seed-davos",
-    title: "De Davos-moment — 'Taxes, taxes, taxes'",
-    url: "https://www.washingtonpost.com/business/2019/01/31/an-angry-historian-ripped-ultra-rich-over-tax-avoidance-davos-then-one-was-given-mic/",
-    desc: "Ik ging naar Davos en vertelde een zaal miljardairs dat ze belasting moeten betalen. 'It feels like I'm at a firefighters conference and no one's allowed to speak about water.' Het filmpje ging viral. Het veranderde… niet zoveel. Maar het voelde goed.",
-    ts: Date.now() - 4000,
-  },
-  {
-    id: "seed-moral",
-    title: "Moral Ambition — de eerste voorpublicatie",
-    url: "https://www.theguardian.com/books/2025/apr/23/moral-ambition-by-rutger-bregman-review-why-you-quit-your-job-to-make-the-world-a-better-place",
-    desc: "'No, you're not fine just the way you are.' Van alle dingen die we in deze wegwerp-wereld verspillen, is verspild talent het grootste verlies. The Guardian recenseert het boek.",
-    ts: Date.now() - 5000,
-  },
-  {
-    id: "seed-ted",
-    title: "Poverty Isn't a Lack of Character, It's a Lack of Cash",
-    url: "https://www.ted.com/talks/rutger_bregman_poverty_isn_t_a_lack_of_character_it_s_a_lack_of_cash",
-    desc: "De TED talk die Chris Anderson tot top 10 van 2017 koos. Basisinkomen is geen luxe maar een mensenrecht. De data is glashelder.",
-    ts: Date.now() - 6000,
-  },
-  {
-    id: "seed-bloomberg",
-    title: "Post-Davos Weekend Interview — Bloomberg",
-    url: "https://www.bloomberg.com/features/2026-rutger-bregman-weekend-interview/",
-    desc: "Na Davos, na de viral moment, na 'Humankind', na 'Moral Ambition' — waar staan we nu? En wat moeten we écht doen?",
-    ts: Date.now() - 7000,
-  },
-  {
-    id: "seed-cnn",
-    title: "From Taxing the Rich to Moral Ambition — CNN",
-    url: "https://www.cnn.com/2025/06/14/us/rutger-bregman-moral-ambition-cec",
-    desc: "Profiel over de evolutie van 'belast de miljardairs' naar 'ga zelf iets doen dat ertoe doet'. Met de School for Moral Ambition als concrete stap.",
-    ts: Date.now() - 8000,
-  },
-];
-
 function loadArticles() {
   const raw = localStorage.getItem(ART_KEY);
-  if (!raw) {
-    localStorage.setItem(ART_KEY, JSON.stringify(DEFAULT_ARTICLES));
-    return DEFAULT_ARTICLES;
-  }
-  return JSON.parse(raw);
+  if (!raw) return [];
+  try { return JSON.parse(raw); } catch (e) { return []; }
 }
 const saveArticles = (arr) => localStorage.setItem(ART_KEY, JSON.stringify(arr));
 const loadSeen = () => JSON.parse(localStorage.getItem(SEEN_KEY) || "[]");
@@ -1974,8 +1807,3 @@ async function init() {
   });
 }
 init();
-
-/* PWA: service worker for offline-lite (optional, graceful) */
-if ("serviceWorker" in navigator) {
-  // skip — keep it simple for static hosting
-}
