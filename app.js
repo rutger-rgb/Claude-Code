@@ -717,6 +717,10 @@ const REAL_QUOTES = [
     text: "Hamer is de horzel die onze samenleving hard nodig heeft.",
     source: "iFilosofie",
   },
+  {
+    text: "Hamer slaat de spijker op zijn kop. Er is niets vrijblijvends aan het liberalisme.",
+    source: "Beatrice de Graaf · over Wat vrijheid van je vraagt",
+  },
 ];
 
 const BREGMAN_BLURBS = [
