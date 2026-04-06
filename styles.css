@@ -500,45 +500,7 @@ main { padding: 0 16px; }
   transition: border-color 1.5s var(--ease-smooth), box-shadow 1.5s var(--ease-smooth);
 }
 
-/* Subtle equalizer — sits BEHIND vinyl, purely atmospheric */
-.eq-bars {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 200px;
-  height: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  opacity: 0;
-  pointer-events: none;
-  z-index: 0;
-  transition: opacity 0.8s var(--ease-smooth);
-}
-.funk-stage:has(.vinyl.playing) .eq-bars { opacity: 0.12; }
-.eq-bars span {
-  display: block;
-  width: 6px;
-  flex-shrink: 0;
-  border-radius: 3px;
-  background: linear-gradient(180deg, var(--funk), var(--funk-2));
-  animation: eqBounce 0.8s ease-in-out infinite alternate;
-}
-.eq-bars span:nth-child(1) { height: 30%; animation-delay: 0s; }
-.eq-bars span:nth-child(2) { height: 60%; animation-delay: 0.12s; }
-.eq-bars span:nth-child(3) { height: 45%; animation-delay: 0.06s; }
-.eq-bars span:nth-child(4) { height: 80%; animation-delay: 0.2s; }
-.eq-bars span:nth-child(5) { height: 50%; animation-delay: 0.08s; }
-.eq-bars span:nth-child(6) { height: 70%; animation-delay: 0.16s; }
-.eq-bars span:nth-child(7) { height: 40%; animation-delay: 0.04s; }
-.eq-bars span:nth-child(8) { height: 55%; animation-delay: 0.14s; }
-.eq-bars span:nth-child(9) { height: 35%; animation-delay: 0.1s; }
-@keyframes eqBounce {
-  0% { transform: scaleY(0.3); }
-  100% { transform: scaleY(1); }
-}
+/* Equalizer removed — caused persistent layout overlap issues */
 
 .vinyl {
   width: 160px; height: 160px;
