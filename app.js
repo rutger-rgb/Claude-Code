@@ -154,12 +154,12 @@ function replayHeroReveal(viewId) {
   // Reset: hide all chars
   h1.classList.add("typewriting");
   chars.forEach((ch) => ch.classList.remove("typed"));
-  // Type them in one by one
+  // Type them in one by one (65ms per char for visible effect)
   chars.forEach((ch, i) => {
-    setTimeout(() => ch.classList.add("typed"), i * 45);
+    setTimeout(() => ch.classList.add("typed"), i * 65);
   });
-  // Clean up after done
-  setTimeout(() => h1.classList.remove("typewriting"), chars.length * 45 + 100);
+  // Remove cursor after typing done
+  setTimeout(() => h1.classList.remove("typewriting"), chars.length * 65 + 400);
 }
 
 const TAB_ORDER = ["view-migraine", "view-funk", "view-articles", "view-ego"];
