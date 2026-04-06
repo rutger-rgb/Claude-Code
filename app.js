@@ -1841,23 +1841,33 @@ function lockBlurbCardHeight() {
     const h = card.offsetHeight;
     if (h > max) max = h;
   }
-  textEl.textContent = savedText;
-  sourceEl.textContent = savedSource;
+  // Restore — but if saved was the HTML default "...", show a real blurb instead
+  if (savedText && savedText !== "..." && savedText.length > 3) {
+    textEl.textContent = savedText;
+    sourceEl.textContent = savedSource;
+  } else if (BLURBS.length) {
+    textEl.textContent = BLURBS[0].text;
+    sourceEl.textContent = "— " + BLURBS[0].source;
+  }
   card.style.minHeight = (max || parseInt(savedMinHeight, 10) || 0) + "px";
 }
 
 function nextBlurb() {
+  if (!BLURBS || !BLURBS.length) return;
   let i;
   do {
     i = Math.floor(Math.random() * BLURBS.length);
   } while (i === blurbIdx && BLURBS.length > 1);
   blurbIdx = i;
-  const card = $("#blurbCard");
+  const card = document.getElementById("blurbCard");
+  const textEl = document.getElementById("blurbText");
+  const sourceEl = document.getElementById("blurbSource");
+  if (!card || !textEl || !sourceEl || !BLURBS[i]) return;
   card.style.opacity = "0";
   card.style.transform = "translateY(8px)";
   setTimeout(() => {
-    $("#blurbText").textContent = BLURBS[i].text;
-    $("#blurbSource").textContent = "— " + BLURBS[i].source;
+    textEl.textContent = BLURBS[i].text;
+    sourceEl.textContent = "— " + BLURBS[i].source;
     card.style.transition = "opacity .35s ease, transform .35s ease";
     card.style.opacity = "1";
     card.style.transform = "none";
