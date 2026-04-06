@@ -1640,28 +1640,6 @@ blockquote#blurbText {
   50% { opacity: 0.5; transform: scale(0.8); }
 }
 
-/* Pull-to-refresh indicator */
-.pull-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition: height .3s var(--ease-out-expo), opacity .3s var(--ease-smooth);
-}
-.pull-indicator.refreshing {
-  transition: none;
-}
-.pull-indicator.refreshing .pull-icon {
-  animation: logo-spin 0.6s ease-in-out infinite;
-}
-.pull-icon {
-  font-size: 28px;
-  transition: transform .1s linear;
-  filter: drop-shadow(0 4px 10px var(--glow-1));
-}
-
 /* Toast */
 .toast {
   position: fixed;
