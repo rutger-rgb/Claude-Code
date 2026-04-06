@@ -576,6 +576,17 @@ main { padding: 0 16px; }
   z-index: 1;
 }
 
+.funk-playlist-link {
+  display: block;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 8px 0 4px;
+  transition: color .2s ease;
+}
+.funk-playlist-link:hover { color: var(--text); }
+
 /* Funk button — vibrant gradient */
 body.mood-funk .funk-btn {
   background: linear-gradient(135deg, var(--funk), var(--funk-2));
@@ -1095,6 +1106,30 @@ blockquote#blurbText {
   font-weight: 600;
 }
 
+/* Sync status dot — top-center of tab bar */
+.sync-dot {
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  opacity: 0.4;
+  transition: background .5s var(--ease-smooth), opacity .5s var(--ease-smooth), box-shadow .5s var(--ease-smooth);
+  z-index: 1;
+}
+.sync-dot.connected {
+  background: var(--green);
+  opacity: 1;
+  box-shadow: 0 0 6px var(--green);
+}
+.sync-dot.error {
+  background: var(--accent);
+  opacity: 1;
+}
+
 /* Tab bar */
 .tabbar {
   position: fixed;
@@ -1599,6 +1634,28 @@ blockquote#blurbText {
   50% { opacity: 0.5; transform: scale(0.8); }
 }
 
+/* Pull-to-refresh indicator */
+.pull-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: height .3s var(--ease-out-expo), opacity .3s var(--ease-smooth);
+}
+.pull-indicator.refreshing {
+  transition: none;
+}
+.pull-indicator.refreshing .pull-icon {
+  animation: logo-spin 0.6s ease-in-out infinite;
+}
+.pull-icon {
+  font-size: 28px;
+  transition: transform .1s linear;
+  filter: drop-shadow(0 4px 10px var(--glow-1));
+}
+
 /* Toast */
 .toast {
   position: fixed;
@@ -1833,6 +1890,17 @@ blockquote#blurbText {
 /* ============================================================
    MIGRAINE MODUS — alles dimmen, alleen de rode knop blijft
    ============================================================ */
+/* ============================================================
+   GOODNIGHT MODE — auto-dims after 22:00, warmer tones
+   ============================================================ */
+body.goodnight-mode {
+  filter: brightness(0.82) saturate(0.85) sepia(0.08);
+  transition: filter 2s var(--ease-smooth);
+}
+body.goodnight-mode .panic {
+  filter: brightness(0.85);
+}
+
 /* ============================================================
    REDUCED MOTION — respect user preference
    ============================================================ */

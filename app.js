@@ -153,17 +153,113 @@ function replayHeroReveal(viewId) {
   });
 }
 
+const TAB_ORDER = ["view-migraine", "view-funk", "view-articles", "view-ego"];
+let currentTabIdx = 0;
+
+function switchToTab(viewId) {
+  const idx = TAB_ORDER.indexOf(viewId);
+  if (idx < 0) return;
+  currentTabIdx = idx;
+  $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.view === viewId));
+  $$(".view").forEach((v) => v.classList.toggle("active", v.id === viewId));
+  setMood(viewId);
+  replayHeroReveal(viewId);
+  if (navigator.vibrate) navigator.vibrate(6);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
 $$(".tab").forEach((tab) => {
-  tab.addEventListener("click", () => {
-    const view = tab.dataset.view;
-    $$(".tab").forEach((t) => t.classList.toggle("active", t === tab));
-    $$(".view").forEach((v) => v.classList.toggle("active", v.id === view));
-    setMood(view);
-    replayHeroReveal(view);
-    if (navigator.vibrate) navigator.vibrate(6);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  });
+  tab.addEventListener("click", () => switchToTab(tab.dataset.view));
 });
+
+/* Swipe left/right to switch tabs */
+let swipeTabStartX = 0;
+let swipeTabStartY = 0;
+let swipeTabActive = false;
+
+const viewsEl = document.getElementById("views");
+if (viewsEl) {
+  viewsEl.addEventListener("touchstart", (e) => {
+    swipeTabStartX = e.touches[0].clientX;
+    swipeTabStartY = e.touches[0].clientY;
+    swipeTabActive = true;
+  }, { passive: true });
+
+  viewsEl.addEventListener("touchend", (e) => {
+    if (!swipeTabActive) return;
+    swipeTabActive = false;
+    const dx = e.changedTouches[0].clientX - swipeTabStartX;
+    const dy = e.changedTouches[0].clientY - swipeTabStartY;
+    // Only trigger if mostly horizontal and long enough
+    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) * 0.7) return;
+    if (dx < 0 && currentTabIdx < TAB_ORDER.length - 1) {
+      // Swipe left → next tab
+      switchToTab(TAB_ORDER[currentTabIdx + 1]);
+    } else if (dx > 0 && currentTabIdx > 0) {
+      // Swipe right → previous tab
+      switchToTab(TAB_ORDER[currentTabIdx - 1]);
+    }
+  }, { passive: true });
+}
+/* ===================================================================
+   PULL-TO-REFRESH (custom, all tabs)
+   =================================================================== */
+let pullStartY = 0;
+let pulling = false;
+let pullIndicator = null;
+
+function getPullIndicator() {
+  if (pullIndicator) return pullIndicator;
+  pullIndicator = document.createElement("div");
+  pullIndicator.className = "pull-indicator";
+  pullIndicator.innerHTML = '<span class="pull-icon">🗿</span>';
+  document.getElementById("app").prepend(pullIndicator);
+  return pullIndicator;
+}
+
+document.addEventListener("touchstart", (e) => {
+  if (window.scrollY > 5) return;
+  pullStartY = e.touches[0].clientY;
+  pulling = true;
+}, { passive: true });
+
+document.addEventListener("touchmove", (e) => {
+  if (!pulling) return;
+  const dy = e.touches[0].clientY - pullStartY;
+  if (dy < 0 || dy > 160) return;
+  if (window.scrollY > 5) { pulling = false; return; }
+  const indicator = getPullIndicator();
+  const progress = Math.min(1, dy / 100);
+  indicator.style.height = Math.max(0, dy * 0.5) + "px";
+  indicator.style.opacity = progress;
+  const icon = indicator.querySelector(".pull-icon");
+  if (icon) icon.style.transform = `rotate(${progress * 360}deg) scale(${0.5 + progress * 0.5})`;
+}, { passive: true });
+
+document.addEventListener("touchend", () => {
+  if (!pulling) return;
+  pulling = false;
+  const indicator = getPullIndicator();
+  const h = parseFloat(indicator.style.height) || 0;
+  if (h > 45) {
+    // Trigger refresh
+    indicator.classList.add("refreshing");
+    haptic("logAttack");
+    // Reload data
+    init().then(() => {
+      setTimeout(() => {
+        indicator.classList.remove("refreshing");
+        indicator.style.height = "0";
+        indicator.style.opacity = "0";
+        toast("Ververst ✓");
+      }, 600);
+    });
+  } else {
+    indicator.style.height = "0";
+    indicator.style.opacity = "0";
+  }
+}, { passive: true });
+
 /* ===================================================================
    INSTAPAPER AUTO-SYNC via public profile scrape
    -----------------------------------------------------------------
@@ -396,6 +492,8 @@ const shortcut = urlParams.get("shortcut");
 const startView = SHORTCUT_MAP[shortcut] || "view-migraine";
 
 // Default mood on load
+currentTabIdx = TAB_ORDER.indexOf(startView);
+if (currentTabIdx < 0) currentTabIdx = 0;
 setMood(startView);
 if (startView !== "view-migraine") {
   $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.view === startView));
@@ -637,6 +735,13 @@ function setSyncStatus(text) {
   const el = document.getElementById("brand-sync");
   if (el) el.textContent = text ? " · " + text : "";
 }
+function setSyncDot(state) {
+  const dot = document.getElementById("syncDot");
+  if (!dot) return;
+  dot.classList.remove("connected", "error");
+  if (state === "connected") dot.classList.add("connected");
+  else if (state === "error") dot.classList.add("error");
+}
 
 // 100th log achievement
 function checkAchievements(logCount) {
@@ -657,6 +762,27 @@ function checkAchievements(logCount) {
   });
   localStorage.setItem("hh_achievements", Array.from(reachedSet).join(","));
 }
+
+/* ===================================================================
+   GOODNIGHT MODE — auto-dim after 22:00, sleep hint at 23:30
+   =================================================================== */
+function checkGoodnightMode() {
+  const hour = new Date().getHours();
+  const min = new Date().getMinutes();
+  const isLate = hour >= 22 || hour < 6;
+  document.body.classList.toggle("goodnight-mode", isLate);
+
+  // Sleep hint at 23:30 (once per session)
+  if (hour === 23 && min >= 30 && !sessionStorage.getItem("hh_sleep_hint")) {
+    sessionStorage.setItem("hh_sleep_hint", "1");
+    setTimeout(() => {
+      island("🌙 Misschien tijd om te slapen, Hammerhead", 5000);
+    }, 2000);
+  }
+}
+checkGoodnightMode();
+// Re-check every 5 minutes
+setInterval(checkGoodnightMode, 5 * 60 * 1000);
 
 /* ---------- Toast ---------- */
 const toastEl = $("#toast");
@@ -1300,6 +1426,11 @@ const FUNK_TRACKS = [
   { title: "Jungle Boogie", artist: "Kool & The Gang", id: "3K0SJUQNbOkUprTFcwwAKN" },
   { title: "Funkytown", artist: "Lipps Inc.", id: "0KQh7AuuZvpTKWhcJa8Pbr" },
   { title: "Super Freak", artist: "Rick James", id: "2dCmGcEOQrMQhMMS8Vj7Ca" },
+  { title: "Ain't No Stoppin' Us Now", artist: "McFadden & Whitehead", id: "4Ymk3pqpkGx19gyxxUj5LK" },
+  { title: "Got to Give It Up", artist: "Marvin Gaye", id: "12sRJfGKwQ3mWWECnZK0GE" },
+  { title: "Boogie Wonderland", artist: "Earth, Wind & Fire", id: "6ztstiyZL6FXzh4aG46ZPD" },
+  { title: "Stayin' Alive", artist: "Bee Gees", id: "7qK3JFriCqLorQivsJYG2X" },
+  { title: "Sir Duke", artist: "Stevie Wonder", id: "4pNiE4LCVV74vfIBaUHm1b" },
 ];
 
 const vinyl = $("#vinyl");
@@ -1856,11 +1987,13 @@ async function init() {
       nextBlurb();
       setTimeout(lockBlurbCardHeight, 400);
       setSyncStatus("☁️");
+      setSyncDot("connected");
       subscribeArticleInserts(swReg);
       setTimeout(() => island("☁️ Gesynct met Supabase", 3000), 300);
     } catch (e) {
       console.warn("Sync failed", e);
       setSyncStatus("⚠️ sync mislukt");
+      setSyncDot("error");
       toast("Supabase sync mislukt — lokale data wordt getoond");
     }
   }
