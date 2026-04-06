@@ -140,7 +140,7 @@ body::before {
 
 /* Top bar */
 .topbar {
-  padding: calc(var(--safe-top) + 22px) 22px 14px;
+  padding: calc(var(--safe-top) + 16px) 22px 8px;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -202,7 +202,7 @@ main { padding: 0 16px; }
   to { opacity: 1; transform: none; filter: blur(0); }
 }
 
-.hero { padding: 10px 4px 20px; }
+.hero { padding: 4px 4px 12px; }
 .hero h1 {
   font-family: var(--font-serif);
   font-optical-sizing: auto;
@@ -219,12 +219,15 @@ main { padding: 0 16px; }
 }
 .hero h1 .ch {
   display: inline-block;
+  opacity: 1;
+}
+.hero h1 .ch.space { display: inline; }
+.hero h1.animating .ch {
   opacity: 0;
   transform: translateY(0.4em);
   filter: blur(6px);
   animation: heroChar 0.9s var(--ease-out-expo) forwards;
 }
-.hero h1 .ch.space { display: inline; }
 @keyframes heroChar {
   to { opacity: 1; transform: none; filter: blur(0); }
 }

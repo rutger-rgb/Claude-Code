@@ -149,12 +149,12 @@ document.querySelectorAll(".hero h1").forEach(splitHeroText);
 function replayHeroReveal(viewId) {
   const h1 = document.querySelector(`#${viewId} .hero h1`);
   if (!h1) return;
-  h1.querySelectorAll(".ch").forEach((ch) => {
-    ch.style.animation = "none";
-    // eslint-disable-next-line no-unused-expressions
-    ch.offsetHeight; // reflow
-    ch.style.animation = "";
-  });
+  h1.classList.remove("animating");
+  // eslint-disable-next-line no-unused-expressions
+  h1.offsetHeight; // reflow
+  h1.classList.add("animating");
+  // Remove class after animation so chars stay visible by default
+  setTimeout(() => h1.classList.remove("animating"), 1500);
 }
 
 const TAB_ORDER = ["view-migraine", "view-funk", "view-articles", "view-ego"];
