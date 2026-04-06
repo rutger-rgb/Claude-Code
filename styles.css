@@ -222,14 +222,12 @@ main { padding: 0 16px; }
   opacity: 1;
 }
 .hero h1 .ch.space { display: inline; }
-.hero h1.animating .ch {
+/* Typewriter: chars hidden then pop in one by one */
+.hero h1.typewriting .ch {
   opacity: 0;
-  transform: translateY(0.4em);
-  filter: blur(6px);
-  animation: heroChar 0.9s var(--ease-out-expo) forwards;
 }
-@keyframes heroChar {
-  to { opacity: 1; transform: none; filter: blur(0); }
+.hero h1.typewriting .ch.typed {
+  opacity: 1;
 }
 .subtitle {
   color: var(--muted);

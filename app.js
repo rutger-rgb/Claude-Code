@@ -149,12 +149,17 @@ document.querySelectorAll(".hero h1").forEach(splitHeroText);
 function replayHeroReveal(viewId) {
   const h1 = document.querySelector(`#${viewId} .hero h1`);
   if (!h1) return;
-  h1.classList.remove("animating");
-  // eslint-disable-next-line no-unused-expressions
-  h1.offsetHeight; // reflow
-  h1.classList.add("animating");
-  // Remove class after animation so chars stay visible by default
-  setTimeout(() => h1.classList.remove("animating"), 1500);
+  const chars = h1.querySelectorAll(".ch");
+  if (!chars.length) return;
+  // Reset: hide all chars
+  h1.classList.add("typewriting");
+  chars.forEach((ch) => ch.classList.remove("typed"));
+  // Type them in one by one
+  chars.forEach((ch, i) => {
+    setTimeout(() => ch.classList.add("typed"), i * 45);
+  });
+  // Clean up after done
+  setTimeout(() => h1.classList.remove("typewriting"), chars.length * 45 + 100);
 }
 
 const TAB_ORDER = ["view-migraine", "view-funk", "view-articles", "view-ego"];
