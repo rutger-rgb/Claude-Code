@@ -1628,6 +1628,19 @@ const REAL_QUOTES = [
     text: "Een van de belangrijkste boeken van dit jaar. Hamer brengt de grote thema's van onze tijd samen, rekent af met de vrijblijvendheid van het verleden, en legt glashelder bloot welke opgave voor ons ligt.",
     source: "Rutger Bregman · over Wat vrijheid van je vraagt",
   },
+  // Bol.com lezersrecensies
+  {
+    text: "Waar de magie begint komen ook antwoorden. Ik zou dat gesprek heel graag met hem aangaan, want ik zag de deur wijd open staan.",
+    source: "Bol.com lezer · filosoofindedop1 · ★★★★★",
+  },
+  {
+    text: "Lijkt verontrustend, toch geruststellend. Een moedige en voor mij ware filosofie.",
+    source: "Bol.com lezer · Pauwper · ★★★★★",
+  },
+  {
+    text: "Als mensen naar de waarheid in dit boek willen leven, zullen fenomenen als 'trots' en 'vergelding' plaatsmaken voor respectievelijk 'dankbaarheid' en 'mededogen'.",
+    source: "Bol.com lezer · Pauwper · ★★★★★",
+  },
 ];
 
 const BREGMAN_BLURBS = [
