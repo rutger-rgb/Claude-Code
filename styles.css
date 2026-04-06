@@ -218,6 +218,10 @@ main { padding: 0 16px; }
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+/* Hide hero text until JS splits it into chars — prevents FOUC */
+.hero h1 { visibility: hidden; }
+.hero h1[data-split] { visibility: visible; }
+
 .hero h1 .ch {
   display: inline-block;
 }
