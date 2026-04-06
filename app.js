@@ -2033,7 +2033,13 @@ async function init() {
     toast("Instapaper sync mislukt");
   });
 }
-init().then(() => {
-  // Typewriter for the initial view — fires after all init work is done
-  setTimeout(() => replayHeroReveal(startView), 300);
-});
+init();
+
+// Typewriter for initial view — completely independent of init/async work.
+// Check if splash is visible (first visit this session) and delay accordingly.
+(() => {
+  const splash = document.getElementById("splash");
+  const splashVisible = splash && !splash.hidden;
+  const delay = splashVisible ? 8500 : 800;
+  setTimeout(() => replayHeroReveal(startView), delay);
+})();
