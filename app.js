@@ -521,12 +521,29 @@ function showSplash() {
 }
 showSplash();
 
-// Document-level delegation for splash skip (survives any timing issue)
+/* ===================================================================
+   CONSOLIDATED CLICK DELEGATION (capture phase)
+   — splash skip, onboarding next/skip all need capture to beat other handlers
+   =================================================================== */
 document.addEventListener("click", (e) => {
   if (e.target.closest("#splashSkip")) {
     e.preventDefault();
     e.stopImmediatePropagation();
     dismissSplash();
+    return;
+  }
+  const next = e.target.closest("#onboardNext");
+  const skip = e.target.closest("#onboardSkip");
+  if (next) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    onboardNext();
+    return;
+  }
+  if (skip) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    onboardFinish();
   }
 }, true);
 
@@ -568,21 +585,6 @@ function onboardFinish() {
 window.onboardNext = onboardNext;
 window.onboardFinish = onboardFinish;
 
-// Event delegation: catch clicks ANYWHERE and route them
-document.addEventListener("click", (e) => {
-  const next = e.target.closest("#onboardNext");
-  const skip = e.target.closest("#onboardSkip");
-  if (next) {
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    onboardNext();
-  } else if (skip) {
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    onboardFinish();
-  }
-}, true); // capture phase to beat any other handler
-
 function showOnboarding() {
   if (localStorage.getItem("hh_onboarded")) return;
   const ob = document.getElementById("onboarding");
@@ -614,37 +616,26 @@ function island(text, duration = 3500) {
 /* ===================================================================
    EASTER EGGS
    =================================================================== */
-// 10x tap on the bust → secret Nietzsche quote
 let bustTaps = 0;
 let bustTimer;
-document.addEventListener("click", (e) => {
-  if (!e.target.closest("#logoBtn")) return;
-  bustTaps++;
-  clearTimeout(bustTimer);
-  bustTimer = setTimeout(() => (bustTaps = 0), 3000);
-  if (bustTaps === 10) {
-    bustTaps = 0;
-    haptic("easter");
-    toast('"Hij die met monsters strijdt, moet ervoor zorgen dat hij daarbij niet zelf een monster wordt." — Friedrich Nietzsche', { duration: 6500 });
-  }
-});
 
-// Time-of-day greeting in the brand-sub (runs after sync)
+// Time-of-day greeting (writes to #brand-greeting only, never clobbers sync status)
 function applyTimeGreeting() {
   const hour = new Date().getHours();
-  const day = new Date().getDay(); // 0 = Sunday
-  let greet = null;
+  const day = new Date().getDay();
+  let greet;
   if (day === 0 && hour >= 18) greet = "Maandagmorgen komt eraan";
   else if (day === 5 && hour >= 15) greet = "Vrijdagmiddag. Je weet wel wat te doen.";
   else if (hour < 6) greet = "Kan je niet slapen, Hammerhead?";
   else if (hour < 12) greet = "Goedemorgen, Hammerhead";
   else if (hour < 18) greet = "Goedemiddag, Hammerhead";
   else greet = "Goedenavond, Hammerhead";
-  if (greet) {
-    const sub = $("#brand-sub");
-    if (sub && SYNC_ENABLED) sub.textContent = greet + " · ☁️";
-    else if (sub) sub.textContent = greet;
-  }
+  const el = document.getElementById("brand-greeting");
+  if (el) el.textContent = greet;
+}
+function setSyncStatus(text) {
+  const el = document.getElementById("brand-sync");
+  if (el) el.textContent = text ? " · " + text : "";
 }
 
 // 100th log achievement
@@ -840,6 +831,10 @@ function cumulative(logs, points) {
 }
 function drawSparkline(canvas, data) {
   if (!canvas) return;
+  // Memoize: skip redraw if data is identical to previous render
+  const key = data.join(",");
+  if (canvas.dataset.sparkKey === key) return;
+  canvas.dataset.sparkKey = key;
   const dpr = window.devicePixelRatio || 1;
   const w = canvas.clientWidth || 80;
   const h = 22;
@@ -1016,8 +1011,23 @@ function attachSwipe(row) {
   });
 }
 
-// Global: tap outside the list closes any open swipe
+/* ===================================================================
+   CONSOLIDATED CLICK DELEGATION (bubble phase)
+   — easter egg, swipe close, general delegation
+   =================================================================== */
 document.addEventListener("click", (e) => {
+  // Easter egg: 10x tap on logo
+  if (e.target.closest("#logoBtn")) {
+    bustTaps++;
+    clearTimeout(bustTimer);
+    bustTimer = setTimeout(() => (bustTaps = 0), 3000);
+    if (bustTaps === 10) {
+      bustTaps = 0;
+      haptic("easter");
+      toast('"Hij die met monsters strijdt, moet ervoor zorgen dat hij daarbij niet zelf een monster wordt." — Friedrich Nietzsche', { duration: 6500 });
+    }
+  }
+  // Swipe-to-delete: close any open row when clicking outside
   if (activeSwipe && !e.target.closest(".swipe-row")) closeActiveSwipe();
 });
 
@@ -1777,24 +1787,28 @@ async function init() {
 
   const swReg = await registerSW();
 
-  // Show sync status in subtitle
+  // Greeting + sync
+  applyTimeGreeting();
   if (SYNC_ENABLED) {
-    $("#brand-sub").textContent = "Filosoferen met de hamer · ⏳ syncen…";
-    await migrateClearSeededArticles();
-    await pullAll();
-    BLURBS = buildBlurbs();
-    const _card = document.getElementById("blurbCard");
-    if (_card) _card.style.minHeight = "0";
-    renderMigraine();
-    renderArticles();
-    nextBlurb();
-    setTimeout(lockBlurbCardHeight, 400);
-    applyTimeGreeting();
-    subscribeArticleInserts(swReg);
-    // Dynamic island style confirmation
-    setTimeout(() => island("☁️ Gesynct met Supabase", 3000), 300);
-  } else {
-    applyTimeGreeting();
+    setSyncStatus("⏳ syncen…");
+    try {
+      await migrateClearSeededArticles();
+      await pullAll();
+      BLURBS = buildBlurbs();
+      const _card = document.getElementById("blurbCard");
+      if (_card) _card.style.minHeight = "0";
+      renderMigraine();
+      renderArticles();
+      nextBlurb();
+      setTimeout(lockBlurbCardHeight, 400);
+      setSyncStatus("☁️");
+      subscribeArticleInserts(swReg);
+      setTimeout(() => island("☁️ Gesynct met Supabase", 3000), 300);
+    } catch (e) {
+      console.warn("Sync failed", e);
+      setSyncStatus("⚠️ sync mislukt");
+      toast("Supabase sync mislukt — lokale data wordt getoond");
+    }
   }
 
   // Kick off Instapaper feed sync (non-blocking)
@@ -1804,6 +1818,9 @@ async function init() {
       renderArticles();
       island(`📖 ${items.length} Instapaper artikelen`, 3500);
     }
+  }).catch((e) => {
+    console.warn("Instapaper feed failed", e);
+    toast("Instapaper sync mislukt");
   });
 }
 init();

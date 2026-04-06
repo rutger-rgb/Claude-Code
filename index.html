@@ -81,7 +81,7 @@
   </div>
 
   <!-- Faux Dynamic Island status pill -->
-  <div id="islandPill" class="island-pill" hidden>
+  <div id="islandPill" class="island-pill" hidden role="status" aria-live="polite">
     <span class="island-dot"></span>
     <span id="islandText">Gesynct</span>
   </div>
@@ -92,7 +92,7 @@
         <button id="logoBtn" class="logo" aria-label="Hard refresh">🗿🔨</button>
         <div class="brand-text">
           <div class="brand-title">Hammerhead HQ</div>
-          <div class="brand-sub" id="brand-sub">Filosoferen met de hamer — sinds Jurriën</div>
+          <div class="brand-sub"><span id="brand-greeting"></span><span id="brand-sync"></span></div>
         </div>
       </div>
     </header>
@@ -121,7 +121,7 @@
         <div class="manual-log">
           <label for="manualTime">Aanval op ander tijdstip</label>
           <div class="manual-log-row">
-            <input type="datetime-local" id="manualTime" />
+            <input type="datetime-local" id="manualTime" min="2020-01-01T00:00" />
             <button id="manualLogBtn" class="btn-ghost small">Log</button>
           </div>
         </div>
@@ -316,7 +316,7 @@
 
         <div class="bookshelf">
           <a class="book" href="https://www.debezigebij.nl/boek/waarom-schurken-pech-hebben-en-helden-geluk/" target="_blank" rel="noopener">
-            <img src="https://books.google.com/books/content?id=crElEAAAQBAJ&printsec=frontcover&img=1&zoom=2" alt="Waarom schurken pech hebben en helden geluk" loading="lazy" onerror="this.parentElement.classList.add('fallback');this.remove()" />
+            <img src="https://books.google.com/books/content?id=crElEAAAQBAJ&printsec=frontcover&img=1&zoom=2" alt="Waarom schurken pech hebben en helden geluk" loading="lazy" onerror="this.parentElement.classList.add('fallback');this.remove()" onload="if(this.naturalWidth<10||this.naturalHeight<10){this.parentElement.classList.add('fallback');this.remove()}" />
             <div class="book-fallback">
               <div class="book-fallback-title">Waarom schurken pech hebben en helden geluk</div>
               <div class="book-fallback-author">Jurriën Hamer</div>
@@ -328,7 +328,7 @@
             </div>
           </a>
           <a class="book" href="https://www.debezigebij.nl/boek/wat-vrijheid-van-je-vraagt/" target="_blank" rel="noopener">
-            <img src="https://books.google.com/books/content?id=tLQzEQAAQBAJ&printsec=frontcover&img=1&zoom=2" alt="Wat vrijheid van je vraagt" loading="lazy" onerror="this.parentElement.classList.add('fallback');this.remove()" />
+            <img src="https://books.google.com/books/content?id=tLQzEQAAQBAJ&printsec=frontcover&img=1&zoom=2" alt="Wat vrijheid van je vraagt" loading="lazy" onerror="this.parentElement.classList.add('fallback');this.remove()" onload="if(this.naturalWidth<10||this.naturalHeight<10){this.parentElement.classList.add('fallback');this.remove()}" />
             <div class="book-fallback">
               <div class="book-fallback-title">Wat vrijheid van je vraagt</div>
               <div class="book-fallback-author">Jurriën Hamer</div>
@@ -364,7 +364,7 @@
   </div>
 
   <button id="exitMigraineMode" aria-label="Migraine modus verlaten">✕</button>
-  <div id="toast" class="toast"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="config.js"></script>
