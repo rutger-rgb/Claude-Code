@@ -1,0 +1,26 @@
+name: Instapaper → Supabase Sync
+
+on:
+  schedule:
+    # Every 15 minutes
+    - cron: "*/15 * * * *"
+  workflow_dispatch: # Manual trigger from Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run Instapaper sync
+        run: node scripts/sync-instapaper.js
+        env:
+          INSTAPAPER_URL: "https://www.instapaper.com/p/brrrtttssss"
+          SUPABASE_URL: "https://ryknakhvromgjpkmeccr.supabase.co"
+          SUPABASE_KEY: "sb_publishable_CWVHYWFXNwRQWnIfSgCBNg_0xDfHNbd"
