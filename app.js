@@ -650,7 +650,12 @@ function onboardFinish() {
   localStorage.setItem("hh_onboarded", "1");
   ob.style.opacity = "0";
   ob.style.transition = "opacity .4s";
-  setTimeout(() => ob.remove(), 450);
+  setTimeout(() => {
+    ob.remove();
+    // Typewriter starts NOW — after onboarding is gone
+    typedTabs.delete(startView);
+    replayHeroReveal(startView);
+  }, 450);
   try { haptic("achievement"); } catch (e) {}
 }
 // Expose globally so inline onclick can find them
@@ -2035,9 +2040,11 @@ async function init() {
 }
 init();
 
-// Typewriter for initial view — completely independent of init/async work.
-// Check if splash is visible (first visit this session) and delay accordingly.
+// Typewriter for initial view — only if no onboarding overlay is pending.
+// If onboarding is showing, onboardFinish() triggers the typewriter instead.
 (() => {
+  const hasOnboarding = !localStorage.getItem("hh_onboarded");
+  if (hasOnboarding) return; // onboardFinish() will handle it
   const splash = document.getElementById("splash");
   const splashVisible = splash && !splash.hidden;
   const delay = splashVisible ? 8500 : 800;
