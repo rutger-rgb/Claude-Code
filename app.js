@@ -146,7 +146,10 @@ function splitHeroText(h1) {
 }
 document.querySelectorAll(".hero h1").forEach(splitHeroText);
 
+const typedTabs = new Set();
 function replayHeroReveal(viewId) {
+  if (typedTabs.has(viewId)) return;
+  typedTabs.add(viewId);
   const h1 = document.querySelector(`#${viewId} .hero h1`);
   if (!h1) return;
   const chars = h1.querySelectorAll(".ch");
