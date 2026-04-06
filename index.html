@@ -220,23 +220,35 @@
       <!-- VIEW 2: FUNK -->
       <section class="view" id="view-funk">
         <div class="hero">
-          <h1>Funk Emergency Button</h1>
-          <p class="subtitle">Eén tik. Eén willekeurig groovy nummer. Geen excuses.</p>
+          <h1>Funk Noodknop</h1>
+          <p class="subtitle">Eén tik. Eén willekeurig groovy nummer. Heupen los, geen excuses.</p>
         </div>
 
         <div class="funk-stage">
+          <!-- Animated equalizer bars -->
+          <div class="eq-bars">
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+          </div>
+
           <div class="vinyl" id="vinyl">
             <div class="vinyl-label">♪</div>
           </div>
+
+          <div class="funk-dancer" id="funkDancer">🕺</div>
+
           <div class="track-info">
             <div class="track-title" id="trackTitle">Nog niks gedraaid</div>
-            <div class="track-artist" id="trackArtist">Druk op de knop en laat de heupen los</div>
+            <div class="track-artist" id="trackArtist">Druk op de knop en laat je gaan</div>
           </div>
           <div id="spotifyEmbed" class="spotify-embed"></div>
           <div class="funk-actions">
-            <button id="funkBtn" class="btn-primary">🎲 Verras mij</button>
+            <button id="funkBtn" class="btn-primary funk-btn">🎲 Verras mij</button>
             <a id="spotifyBtn" class="btn-ghost" href="#" target="_blank" rel="noopener" aria-disabled="true">Open in Spotify app</a>
           </div>
+
+          <!-- Confetti container -->
+          <div class="funk-confetti" id="funkConfetti"></div>
         </div>
       </section>
 

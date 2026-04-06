@@ -1303,6 +1303,41 @@ const FUNK_TRACKS = [
 ];
 
 const vinyl = $("#vinyl");
+const funkDancer = $("#funkDancer");
+
+/* Confetti burst on funk button press */
+function spawnConfetti() {
+  const container = document.getElementById("funkConfetti");
+  if (!container) return;
+  container.innerHTML = "";
+  const colors = ["#b967ff", "#01cdfe", "#ff6b9d", "#ffd166", "#30d158", "#ff2d55", "#e8a054"];
+  for (let i = 0; i < 30; i++) {
+    const piece = document.createElement("div");
+    piece.className = "confetti-piece";
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.left = (20 + Math.random() * 60) + "%";
+    piece.style.top = (10 + Math.random() * 30) + "%";
+    piece.style.animationDelay = (Math.random() * 0.4) + "s";
+    piece.style.animationDuration = (1.2 + Math.random() * 0.8) + "s";
+    piece.style.width = (5 + Math.random() * 6) + "px";
+    piece.style.height = (5 + Math.random() * 6) + "px";
+    piece.style.borderRadius = Math.random() > 0.5 ? "50%" : "2px";
+    container.appendChild(piece);
+  }
+  // Clean up after animation
+  setTimeout(() => { container.innerHTML = ""; }, 2200);
+}
+
+const FUNK_TOASTS = [
+  "🎶 Let's go!",
+  "🕺 Heupen los!",
+  "🎵 Groove time!",
+  "💃 Dansen, Hammerhead!",
+  "🎶 Funky fresh!",
+  "🕺 Daar gaan we!",
+  "🎵 Stevie approves!",
+];
+
 $("#funkBtn").addEventListener("click", () => {
   const track = FUNK_TRACKS[Math.floor(Math.random() * FUNK_TRACKS.length)];
   $("#trackTitle").textContent = track.title;
@@ -1311,12 +1346,18 @@ $("#funkBtn").addEventListener("click", () => {
   btn.href = "https://open.spotify.com/track/" + track.id;
   btn.setAttribute("aria-disabled", "false");
   vinyl.classList.add("playing");
+  // Start the dancer
+  if (funkDancer) funkDancer.classList.add("dancing");
+  // Confetti burst!
+  spawnConfetti();
   // Embed the Spotify player directly so playback happens in-app
   const embed = $("#spotifyEmbed");
   embed.innerHTML = `<iframe src="https://open.spotify.com/embed/track/${track.id}?utm_source=generator&theme=0" height="152" frameborder="0" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
   embed.classList.add("active");
-  if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
-  toast("🎶 " + track.title);
+  if (navigator.vibrate) navigator.vibrate([10, 30, 10, 20, 10]);
+  // Random fun toast
+  const msg = FUNK_TOASTS[Math.floor(Math.random() * FUNK_TOASTS.length)] + " " + track.title;
+  toast(msg);
   // Fetch Spotify oEmbed for the thumbnail, then extract dominant colors
   fetchAlbumColors(track.id).catch(() => {});
 });
