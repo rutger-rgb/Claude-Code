@@ -1846,6 +1846,11 @@ const REAL_QUOTES = [
     text: "Een van de belangrijkste boeken van dit jaar. Hamer brengt de grote thema's van onze tijd samen, rekent af met de vrijblijvendheid van het verleden, en legt glashelder bloot welke opgave voor ons ligt.",
     source: "Rutger Bregman · over Wat vrijheid van je vraagt",
   },
+  // Volkskrant
+  {
+    text: "Hamer beschrijft in zijn fascinerende boek hoe het huidige liberalisme de samenleving in een diepe morele crisis heeft gestort.",
+    source: "de Volkskrant",
+  },
   // Bol.com lezersrecensies
   {
     text: "Waar de magie begint komen ook antwoorden. Ik zou dat gesprek heel graag met hem aangaan, want ik zag de deur wijd open staan.",
