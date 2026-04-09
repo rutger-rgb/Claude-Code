@@ -1851,6 +1851,10 @@ const REAL_QUOTES = [
     text: "Hamer beschrijft in zijn fascinerende boek hoe het huidige liberalisme de samenleving in een diepe morele crisis heeft gestort.",
     source: "de Volkskrant",
   },
+  {
+    text: "Hamer is streng voor zijn lezers, maar slaagt erin om een totaal andere kijk te geven op wat liberalisme ook zou kunnen zijn.",
+    source: "de Volkskrant",
+  },
   // Bol.com lezersrecensies
   {
     text: "Waar de magie begint komen ook antwoorden. Ik zou dat gesprek heel graag met hem aangaan, want ik zag de deur wijd open staan.",
