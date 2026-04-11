@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quote-wall — HGW 2026</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar"></header>
+
+    <main class="container">
+      <h1>Quote-wall</h1>
+      <p class="muted">
+        Gouden uitspraken van het weekend.
+        <span class="sync-badge" data-sync-badge></span>
+      </p>
+
+      <div class="card">
+        <h3>Quote toevoegen</h3>
+        <form id="quote-form">
+          <div class="field">
+            <label for="text">Wat werd er gezegd?</label>
+            <textarea id="text" name="text" rows="3" required placeholder="&quot;Is dit al de afterparty of moeten we nog ergens heen?&quot;"></textarea>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="said_by">Wie zei dit?</label>
+              <input id="said_by" name="said_by" required />
+            </div>
+            <div class="field">
+              <label for="context">Context (optioneel)</label>
+              <input id="context" name="context" placeholder="bv. bij het ontbijt" />
+            </div>
+          </div>
+          <button type="submit" class="btn-accent">Vastleggen</button>
+        </form>
+      </div>
+
+      <div id="wall" class="quote-wall"></div>
+    </main>
+
+    <footer>HGW '26</footer>
+
+    <script type="module">
+      import { initPage } from "./js/app.js";
+      import { getAll, add } from "./js/data.js";
+
+      initPage();
+      const wall = document.getElementById("wall");
+
+      function escape(str) {
+        return (str || "").replace(/[&<>"]/g, (c) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+        }[c]));
+      }
+
+      async function render() {
+        const items = await getAll("quotes", { order: "created_at", ascending: false });
+        if (!items.length) {
+          wall.innerHTML = `<p class="empty">Nog geen quotes. Wie begint?</p>`;
+          return;
+        }
+        wall.innerHTML = items
+          .map(
+            (q) => `
+              <div class="quote">
+                ${escape(q.text)}
+                <span class="attribution">— ${escape(q.said_by)}${q.context ? `, ${escape(q.context)}` : ""}</span>
+              </div>
+            `
+          )
+          .join("");
+      }
+
+      document.getElementById("quote-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const data = new FormData(form);
+        await add("quotes", {
+          text: data.get("text"),
+          said_by: data.get("said_by"),
+          context: data.get("context") || null,
+        });
+        form.reset();
+        render();
+      });
+
+      render();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pubquiz — HGW 2026</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar"></header>
+
+    <main class="container">
+      <h1>Pubquiz</h1>
+      <p class="muted">
+        Trivia over de studententijd.
+        <span class="sync-badge" data-sync-badge></span>
+      </p>
+
+      <div class="card">
+        <h3>Nieuwe vraag</h3>
+        <p class="muted">Geef vier antwoorden en vink de juiste aan.</p>
+        <form id="q-form">
+          <div class="field">
+            <label for="question">De vraag</label>
+            <input id="question" name="question" required placeholder="bv. Wie viel tijdens het dispuut in de gracht?" />
+          </div>
+          <div id="opts">
+            <div class="row">
+              <div class="field"><label>Optie A</label><input name="opt0" required /></div>
+              <div class="field"><label>Optie B</label><input name="opt1" required /></div>
+            </div>
+            <div class="row">
+              <div class="field"><label>Optie C</label><input name="opt2" required /></div>
+              <div class="field"><label>Optie D</label><input name="opt3" required /></div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="correct">Juiste antwoord</label>
+            <select id="correct" name="correct" required>
+              <option value="0">A</option>
+              <option value="1">B</option>
+              <option value="2">C</option>
+              <option value="3">D</option>
+            </select>
+          </div>
+          <button type="submit" class="btn-accent">Vraag toevoegen</button>
+        </form>
+      </div>
+
+      <div class="card center">
+        <button id="play-btn">▶ Speel de quiz</button>
+        <span id="score" class="muted" style="margin-left: 1rem"></span>
+      </div>
+
+      <div id="quiz"></div>
+    </main>
+
+    <footer>HGW '26</footer>
+
+    <script type="module">
+      import { initPage } from "./js/app.js";
+      import { getAll, add } from "./js/data.js";
+
+      initPage();
+      const quizEl = document.getElementById("quiz");
+      const scoreEl = document.getElementById("score");
+
+      function escape(str) {
+        return (str || "").replace(/[&<>"]/g, (c) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+        }[c]));
+      }
+
+      async function renderList() {
+        const qs = await getAll("quiz", { order: "created_at" });
+        if (!qs.length) {
+          quizEl.innerHTML = `<p class="empty">Nog geen vragen. Voeg de eerste toe!</p>`;
+          return;
+        }
+        quizEl.innerHTML = `
+          <h2>Vragen in de quiz (${qs.length})</h2>
+          ${qs
+            .map(
+              (q) => `
+                <div class="quiz-question">
+                  <h3>${escape(q.question)}</h3>
+                  <div class="muted">Juiste antwoord: ${["A","B","C","D"][q.correct]} — ${escape(q.options[q.correct])}</div>
+                </div>
+              `
+            )
+            .join("")}
+        `;
+      }
+
+      async function play() {
+        const qs = await getAll("quiz", { order: "created_at" });
+        if (!qs.length) return;
+        // Schud vragen
+        const shuffled = [...qs].sort(() => Math.random() - 0.5);
+        let score = 0;
+        let answered = 0;
+
+        quizEl.innerHTML = shuffled
+          .map(
+            (q, i) => `
+              <div class="quiz-question" data-q="${i}">
+                <h3>${i + 1}. ${escape(q.question)}</h3>
+                <div class="quiz-options">
+                  ${q.options
+                    .map(
+                      (opt, j) => `
+                        <button type="button" class="quiz-option" data-opt="${j}">${["A","B","C","D"][j]}. ${escape(opt)}</button>
+                      `
+                    )
+                    .join("")}
+                </div>
+              </div>
+            `
+          )
+          .join("");
+
+        scoreEl.textContent = `Score: 0 / ${shuffled.length}`;
+
+        quizEl.querySelectorAll(".quiz-question").forEach((card) => {
+          const qi = Number(card.dataset.q);
+          const q = shuffled[qi];
+          card.querySelectorAll(".quiz-option").forEach((btn) => {
+            btn.addEventListener("click", () => {
+              if (card.dataset.answered) return;
+              card.dataset.answered = "1";
+              const picked = Number(btn.dataset.opt);
+              card.querySelectorAll(".quiz-option").forEach((b, i) => {
+                if (i === q.correct) b.classList.add("correct");
+                else if (i === picked) b.classList.add("wrong");
+              });
+              if (picked === q.correct) score++;
+              answered++;
+              scoreEl.textContent = `Score: ${score} / ${shuffled.length}`;
+            });
+          });
+        });
+      }
+
+      document.getElementById("q-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const data = new FormData(form);
+        const options = [
+          data.get("opt0"),
+          data.get("opt1"),
+          data.get("opt2"),
+          data.get("opt3"),
+        ];
+        await add("quiz", {
+          question: data.get("question"),
+          options,
+          correct: Number(data.get("correct")),
+        });
+        form.reset();
+        renderList();
+      });
+
+      document.getElementById("play-btn").addEventListener("click", play);
+
+      renderList();
+    </script>
+  </body>
+</html>

@@ -3,14 +3,82 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HGW 2026</title>
+    <title>HGW 2026 — Bonte Wever</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <main>
-      <h1>HGW 2026</h1>
-      <p>Welkom bij je nieuwe project.</p>
+    <header class="topbar"></header>
+
+    <main class="container">
+      <section class="hero">
+        <div class="stamp">Editie MMXXVI</div>
+        <h1>HGW 2026</h1>
+        <p class="subtitle">
+          De Bonte Wever · Assen
+          <span class="sync-badge" data-sync-badge></span>
+        </p>
+
+        <div class="countdown-wrap">
+          <div class="countdown" id="countdown"></div>
+          <p class="muted countdown-caption">tot de kick-off</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>De app</h2>
+        <p class="muted">
+          Kies een onderdeel. Alles in deze app is voor en door de groep —
+          quotes, foto's en quizantwoorden kunnen door iedereen toegevoegd
+          worden.
+        </p>
+        <div class="tile-grid">
+          <a class="tile" href="smoelenboek.html">
+            <span class="emoji">👥</span>
+            <h3>Smoelenboek</h3>
+            <p>Wie is wie? Inclusief partners, kids en studie-bijnamen.</p>
+          </a>
+          <a class="tile" href="programma.html">
+            <span class="emoji">📅</span>
+            <h3>Programma</h3>
+            <p>De planning van het weekend per dag.</p>
+          </a>
+          <a class="tile" href="kamers.html">
+            <span class="emoji">🛏️</span>
+            <h3>Kamers</h3>
+            <p>Wie slaapt waar, met kamernummer en bewoners.</p>
+          </a>
+          <a class="tile" href="kids.html">
+            <span class="emoji">🧒</span>
+            <h3>Kids</h3>
+            <p>Alle kinderen in één overzicht — leeftijden, allergieën, dieet.</p>
+          </a>
+          <a class="tile" href="quiz.html">
+            <span class="emoji">🎓</span>
+            <h3>Pubquiz</h3>
+            <p>Trivia over jullie gedeelde studententijd.</p>
+          </a>
+          <a class="tile" href="quotes.html">
+            <span class="emoji">💬</span>
+            <h3>Quote-wall</h3>
+            <p>Gouden uitspraken van het weekend.</p>
+          </a>
+          <a class="tile" href="fotos.html">
+            <span class="emoji">📸</span>
+            <h3>Foto-wall</h3>
+            <p>Gedeelde polaroids. Upload je eigen foto's.</p>
+          </a>
+        </div>
+      </section>
     </main>
-    <script src="script.js"></script>
+
+    <footer>
+      Made with 🍺 — HGW '26
+    </footer>
+
+    <script type="module">
+      import { initPage, renderCountdown } from "./js/app.js";
+      initPage();
+      renderCountdown(document.getElementById("countdown"));
+    </script>
   </body>
 </html>

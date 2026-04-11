@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kids — HGW 2026</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar"></header>
+
+    <main class="container">
+      <h1>Kids-overzicht</h1>
+      <p class="muted">
+        Wie er allemaal zijn, leeftijd, allergieën, dieet.
+        <span class="sync-badge" data-sync-badge></span>
+      </p>
+
+      <div class="card">
+        <h3>Voeg een kind toe</h3>
+        <form id="kid-form">
+          <div class="row">
+            <div class="field">
+              <label for="name">Naam</label>
+              <input id="name" name="name" required />
+            </div>
+            <div class="field">
+              <label for="age">Leeftijd</label>
+              <input id="age" name="age" type="number" min="0" max="25" required />
+            </div>
+          </div>
+          <div class="field">
+            <label for="parent">Van wie</label>
+            <input id="parent" name="parent" placeholder="bv. Jan & Marieke" />
+          </div>
+          <div class="field">
+            <label for="allergies">Allergieën / dieet</label>
+            <input id="allergies" name="allergies" placeholder="bv. noten, vegetarisch" />
+          </div>
+          <div class="field">
+            <label for="notes">Opmerkingen</label>
+            <input id="notes" name="notes" placeholder="bv. slaapt nog middag" />
+          </div>
+          <button type="submit" class="btn-accent">Toevoegen</button>
+        </form>
+      </div>
+
+      <h2>De kids</h2>
+      <div id="kids" class="kids-grid"></div>
+    </main>
+
+    <footer>HGW '26</footer>
+
+    <script type="module">
+      import { initPage } from "./js/app.js";
+      import { getAll, add } from "./js/data.js";
+
+      initPage();
+      const grid = document.getElementById("kids");
+
+      async function render() {
+        const kids = await getAll("kids", { order: "age" });
+        if (!kids.length) {
+          grid.innerHTML = `<p class="empty">Nog geen kids toegevoegd.</p>`;
+          return;
+        }
+        grid.innerHTML = kids
+          .map(
+            (k) => `
+              <div class="kid">
+                <div>
+                  <span class="name">${k.name}</span>
+                  <span class="age">${k.age} jr</span>
+                </div>
+                ${k.parent ? `<span class="detail">van ${k.parent}</span>` : ""}
+                ${k.allergies ? `<span class="detail">⚠ ${k.allergies}</span>` : ""}
+                ${k.notes ? `<span class="detail">${k.notes}</span>` : ""}
+              </div>
+            `
+          )
+          .join("");
+      }
+
+      document.getElementById("kid-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const data = new FormData(form);
+        await add("kids", {
+          name: data.get("name"),
+          age: Number(data.get("age")),
+          parent: data.get("parent") || null,
+          allergies: data.get("allergies") || null,
+          notes: data.get("notes") || null,
+        });
+        form.reset();
+        render();
+      });
+
+      render();
+    </script>
+  </body>
+</html>
