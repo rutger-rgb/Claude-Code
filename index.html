@@ -15,68 +15,83 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,800;0,9..144,900;1,9..144,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="orakel-splash.css" />
   <title>Hammerhead HQ — voor Jurriën</title>
 </head>
 <body>
-  <!-- Splash screen — cinematic intro on first load per session -->
-  <div id="splash" class="splash" hidden>
-    <div class="splash-stars"></div>
-    <div class="splash-vignette"></div>
-    <div class="splash-shake">
-      <div class="splash-core">
-        <div class="splash-shockwave"></div>
-        <div class="splash-shockwave delay"></div>
-        <div class="splash-bust">🗿</div>
-        <div class="splash-hammer">🔨</div>
-        <div class="splash-flash"></div>
-        <div class="splash-particles">
-          <span></span><span></span><span></span><span></span><span></span>
-          <span></span><span></span><span></span><span></span><span></span>
-          <span></span><span></span>
-        </div>
-      </div>
-      <div class="splash-title-wrap">
-        <h1 class="splash-title">
-          <span class="ch">H</span><span class="ch">A</span><span class="ch">M</span><span class="ch">M</span><span class="ch">E</span><span class="ch">R</span><span class="ch">H</span><span class="ch">E</span><span class="ch">A</span><span class="ch">D</span>
-          <span class="ch space">&nbsp;</span>
-          <span class="ch">H</span><span class="ch">Q</span>
-        </h1>
-      </div>
-      <div class="splash-tagline" id="splashTagline">Filosoferen met de hamer</div>
-      <div class="splash-subtagline" id="splashSubTagline"></div>
-    </div>
-    <button class="splash-skip" id="splashSkip" type="button" onclick="window.dismissSplash && window.dismissSplash()">Skip</button>
-  </div>
+  <!-- Hammer-Orakel splash: 3D cinematic opening (first load per session) -->
+  <div id="orakel-splash" hidden>
+    <div id="stage"><canvas id="c3d"></canvas></div>
+    <div class="vignette"></div>
 
-  <!-- Onboarding — shown once ever on first visit -->
-  <div id="onboarding" class="onboarding" hidden>
-    <div class="onboard-slides">
-      <div class="onboard-slide active" data-slide="0">
-        <div class="onboard-visual">🗿🔨</div>
-        <h2>Welkom, Hammerhead</h2>
-        <p>Dit is jouw HQ. Migraine, funk, leesvoer en ego-boosts — alles op één plek, alleen voor jou.</p>
-      </div>
-      <div class="onboard-slide" data-slide="1">
-        <div class="onboard-visual panic-demo">
-          <div class="panic-demo-inner">AANVAL</div>
+    <div class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 64 64">
+            <defs>
+              <linearGradient id="bmG" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ff2d55"/><stop offset="1" stop-color="#7a0e23"/>
+              </linearGradient>
+            </defs>
+            <rect x="4" y="4" width="56" height="56" rx="14" fill="#15151c" stroke="rgba(255,255,255,.08)"/>
+            <path d="M20 18 L44 18 L40 32 L44 46 L20 46 L24 32 Z" fill="url(#bmG)"/>
+            <path d="M20 18 L44 18 L40 32 L24 32 Z" fill="#fff" opacity=".12"/>
+          </svg>
+        </span>
+        <div>
+          <div class="brand-title">Hammerhead HQ</div>
         </div>
-        <h2>De grote rode knop</h2>
-        <p>Eén tik zodra een aanval begint. We loggen het, berekenen je streak, en onthouden alles — voor altijd.</p>
       </div>
-      <div class="onboard-slide" data-slide="2">
-        <div class="onboard-visual">🕺 📰 ⚡</div>
-        <h2>De rest is voor de goede dagen</h2>
-        <p>Een funk-knop voor spontane dansjes, leesvoer van je webmaster, en lovende citaten voor als de twijfel toeslaat.</p>
+      <div class="toplinks">
+        <button class="toplink" id="openApp" type="button">Open HQ →</button>
       </div>
     </div>
-    <div class="onboard-dots">
-      <span class="onboard-dot active"></span>
-      <span class="onboard-dot"></span>
-      <span class="onboard-dot"></span>
+
+    <div class="hero-ui" id="heroUI">
+      <div class="kicker" id="kicker"></div>
+      <h1 class="big-title" id="bigTitle"></h1>
+      <div class="tagline" id="tagline"></div>
+      <div class="cta-row">
+        <button class="cta primary" id="ctaPrimary" type="button">Open HQ</button>
+      </div>
     </div>
-    <div class="onboard-actions">
-      <button id="onboardSkip" type="button" class="btn-ghost" onclick="window.onboardFinish && window.onboardFinish()">Overslaan</button>
-      <button id="onboardNext" type="button" class="btn-primary" onclick="window.onboardNext && window.onboardNext()">Volgende</button>
+
+    <!-- Designer-only elements (hidden via CSS) kept so the script can bind without crashing -->
+    <div class="scene-label" id="sceneLabel"></div>
+    <div class="variant-dots" id="variantDots">
+      <button class="vdot on" data-variant="descent" type="button"></button>
+      <button class="vdot" data-variant="strike" type="button"></button>
+      <button class="vdot" data-variant="orbit" type="button"></button>
+      <button class="vdot" data-variant="ascend" type="button"></button>
+    </div>
+    <button class="tweaks-toggle-btn" id="tweaksToggle" type="button"></button>
+    <aside class="tweaks" id="tweaksPanel" aria-hidden="true">
+      <div class="chip-row" id="chips-variant">
+        <button class="chip" data-variant="descent" type="button"></button>
+        <button class="chip" data-variant="strike" type="button"></button>
+        <button class="chip" data-variant="orbit" type="button"></button>
+        <button class="chip" data-variant="ascend" type="button"></button>
+      </div>
+      <div class="chip-row" id="chips-palette">
+        <button class="chip" data-palette="migraine" type="button"></button>
+        <button class="chip" data-palette="ego" type="button"></button>
+        <button class="chip" data-palette="funk" type="button"></button>
+        <button class="chip" data-palette="storm" type="button"></button>
+      </div>
+      <div class="chip-row" id="chips-quality">
+        <button class="chip" data-quality="high" type="button"></button>
+        <button class="chip" data-quality="med" type="button"></button>
+        <button class="chip" data-quality="low" type="button"></button>
+      </div>
+      <input id="capeSlider" type="range" min="0" max="2" step="0.05" value="1" />
+      <input id="titleIn" />
+      <input id="taglineIn" />
+      <input id="kickerIn" />
+    </aside>
+
+    <div class="loading" id="loading">
+      <div class="spin"></div>
+      <div class="loading-text">render · orakel · ontwaakt</div>
     </div>
   </div>
 
@@ -305,6 +320,13 @@
     </main>
 
     <nav class="tabbar">
+      <div class="sidebar-brand">
+        <span class="sidebar-logo">🗿🔨</span>
+        <div class="sidebar-brand-text">
+          <span class="sidebar-title">Hammerhead HQ</span>
+          <span class="sidebar-sub">Filosoferen met de hamer</span>
+        </div>
+      </div>
       <div class="sync-dot" id="syncDot" title="Sync status"></div>
       <button class="tab active" data-view="view-migraine">
         <span class="tab-icon">🧠</span>
@@ -331,5 +353,44 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="config.js"></script>
   <script src="app.js"></script>
+
+  <!-- Hammer-Orakel splash (Three.js) — loaded only when #orakel-splash is shown -->
+  <script>
+    window.TWEAK_DEFAULTS = {
+      "variant": "descent",
+      "title": "HAMMERHEAD",
+      "tagline": "Give your ego some pleasure time.",
+      "kicker": "Officiële Jurriën Hamer companion app",
+      "palette": "migraine",
+      "cape": 2,
+      "quality": "high"
+    };
+  </script>
+  <script>
+    // Only load the heavy Three.js module if the splash is actually visible.
+    // showSplash() in app.js removes the element when it's been seen this session.
+    (function() {
+      const splash = document.getElementById("orakel-splash");
+      if (!splash || splash.hidden) return;
+
+      // Safety net: if the 3D scene hasn't finished initializing within 12s,
+      // auto-dismiss the splash so the user isn't stuck on the loader.
+      var safetyTimer = setTimeout(function(){
+        console.warn("[orakel] Setup timed out — dismissing splash.");
+        if (window.dismissOrakelSplash) window.dismissOrakelSplash();
+      }, 12000);
+      window.__orakelClearSafetyTimer = function(){ clearTimeout(safetyTimer); };
+
+      var s = document.createElement("script");
+      s.type = "module";
+      s.src = "orakel-splash.js";
+      s.onerror = function(e){
+        console.error("[orakel] Failed to load module:", e);
+        clearTimeout(safetyTimer);
+        if (window.dismissOrakelSplash) window.dismissOrakelSplash();
+      };
+      document.body.appendChild(s);
+    })();
+  </script>
 </body>
 </html>

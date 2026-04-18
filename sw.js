@@ -2,12 +2,14 @@
  * Handles: offline caching (cache-first for static assets, network-first
  * for API/CDN), and notification click routing. */
 
-const CACHE_NAME = "hh-cache-v1";
+const CACHE_NAME = "hh-cache-v5";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
+  "./orakel-splash.css",
   "./app.js",
+  "./orakel-splash.js",
   "./config.js",
   "./icon.svg",
   "./manifest.webmanifest",
@@ -50,20 +52,34 @@ self.addEventListener("fetch", (event) => {
     url.hostname.includes("gstatic")
   ) return;
 
-  // Same-origin static assets: cache-first
+  // Same-origin: network-first for HTML/JS/CSS (so updates are immediately visible),
+  // cache-first for everything else (icons, manifest).
   if (url.origin === self.location.origin) {
-    event.respondWith(
-      caches.match(event.request).then((cached) => {
-        const fetchPromise = fetch(event.request).then((response) => {
+    const isCodeFile = /\.(html|js|css)(\?.*)?$/.test(url.pathname) || url.pathname.endsWith("/");
+    if (isCodeFile) {
+      event.respondWith(
+        fetch(event.request).then((response) => {
           if (response && response.ok) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           }
           return response;
-        }).catch(() => cached);
-        return cached || fetchPromise;
-      })
-    );
+        }).catch(() => caches.match(event.request))
+      );
+    } else {
+      event.respondWith(
+        caches.match(event.request).then((cached) => {
+          const fetchPromise = fetch(event.request).then((response) => {
+            if (response && response.ok) {
+              const clone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+            }
+            return response;
+          }).catch(() => cached);
+          return cached || fetchPromise;
+        })
+      );
+    }
     return;
   }
 });
