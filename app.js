@@ -585,7 +585,6 @@ function dismissSplash() {
   if (!splash) return;
   splash.classList.add("dismissed");
   document.body.classList.remove("orakel-active");
-  // Onboarding should not show after the cinematic opening
   try { localStorage.setItem("hh_onboarded", "1"); } catch (e) {}
   setTimeout(() => splash.remove(), 750);
 }
@@ -606,9 +605,22 @@ function showSplash() {
     return;
   }
 
+  // Orakel IS the introduction → suppress onboarding entirely
+  try { localStorage.setItem("hh_onboarded", "1"); } catch (e) {}
+  const ob = document.getElementById("onboarding");
+  if (ob) ob.remove();
+
   splash.hidden = false;
   document.body.classList.add("orakel-active");
   sessionStorage.setItem("hh_orakel_seen", "1");
+
+  // Fallback dismiss handlers — work even if Three.js module fails to load
+  var openBtn = document.getElementById("openApp");
+  var ctaBtn = document.getElementById("ctaPrimary");
+  if (openBtn) openBtn.addEventListener("click", dismissSplash);
+  if (ctaBtn) ctaBtn.addEventListener("click", function () {
+    setTimeout(dismissSplash, 180);
+  });
 }
 showSplash();
 
