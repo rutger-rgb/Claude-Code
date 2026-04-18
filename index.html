@@ -1385,7 +1385,11 @@ document.getElementById('kickerIn').addEventListener('input', e=>{ state.kicker 
 document.getElementById('replayBtn').addEventListener('click', ()=> play(currentVariant));
 document.getElementById('ctaReplay').addEventListener('click', ()=> play(currentVariant));
 function markOpeningSeen(){
-  try { sessionStorage.setItem('hh_opening_seen','1'); sessionStorage.setItem('hh_splash_seen','1'); } catch(e){}
+  try {
+    sessionStorage.setItem('hh_opening_seen','1');
+    sessionStorage.setItem('hh_splash_seen','1');
+    localStorage.setItem('hh_onboarded','1');
+  } catch(e){}
 }
 document.getElementById('openApp').addEventListener('click', ()=> { markOpeningSeen(); window.location.href = 'app.html'; });
 document.getElementById('ctaPrimary').addEventListener('click', ()=>{ thunk(.95,1); markOpeningSeen(); setTimeout(()=> { window.location.href = 'app.html'; }, 180); });
