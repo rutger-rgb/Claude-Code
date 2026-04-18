@@ -159,8 +159,17 @@ body.orakel-active::after {
 @keyframes orakelSpin { to { transform: rotate(360deg); } }
 
 @media (max-width: 720px) {
-  #orakel-splash .big-title { font-size: 64px; }
-  #orakel-splash .topbar { padding: 0 18px; }
+  #orakel-splash .big-title { font-size: clamp(44px, 13.5vw, 64px); letter-spacing: -.05em; }
+  #orakel-splash .tagline { font-size: 14px; padding: 0 12px; }
+  #orakel-splash .kicker { font-size: 10px; letter-spacing: .3em; }
+  #orakel-splash .hero-ui { padding: 0 16px calc(40px + env(safe-area-inset-bottom, 0px)); }
+  #orakel-splash .topbar { padding: 0 14px; top: calc(env(safe-area-inset-top, 0px) + 28px); }
+  #orakel-splash .cta { font-size: 12px; padding: 12px 18px; }
+  #orakel-splash .cta-row { gap: 8px; margin-top: 14px; }
+}
+@media (max-width: 380px) {
+  #orakel-splash .big-title { font-size: 42px; }
+  #orakel-splash .brand-title { font-size: 15px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

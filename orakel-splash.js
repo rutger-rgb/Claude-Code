@@ -21,7 +21,7 @@ const state = { ...window.TWEAK_DEFAULTS };
 const SCENE_DURATIONS = { descent:6.5, strike:5.0, orbit:5.8, ascend:5.4 };
 const SCENE_LABELS   = { descent:"01 · descent", strike:"02 · strike", orbit:"03 · orbit", ascend:"04 · ascension" };
 const TIMES = {
-  descent: { kicker:3.3, title:3.8, tag:4.4, cta:4.8 },
+  descent: { kicker:3.6, title:4.1, tag:4.7, cta:5.0 },
   strike:  { kicker:1.2, title:1.85, tag:2.5, cta:2.85 },
   orbit:   { kicker:1.4, title:1.9, tag:2.5, cta:2.85 },
   ascend:  { kicker:1.5, title:2.3, tag:2.9, cta:3.2 },
@@ -542,7 +542,9 @@ function resize(){
   const dpr = Math.min(window.devicePixelRatio, state.quality==='high'?2: state.quality==='med'?1.25:1);
   renderer.setPixelRatio(dpr);
   renderer.setSize(w,h,false);
-  camera.aspect = w/h; camera.updateProjectionMatrix();
+  const aspect = w/h;
+  camera.fov = aspect < 0.7 ? 60 : aspect < 1.0 ? 50 : 42;
+  camera.aspect = aspect; camera.updateProjectionMatrix();
   composer.setPixelRatio(dpr); composer.setSize(w,h);
   fxaaPass.uniforms['resolution'].value.set(1/(w*dpr), 1/(h*dpr));
   bloomPass.resolution.set(w,h);
@@ -624,84 +626,112 @@ function attachHammerToRightHand(){
 
 // ────────── Descent: Superman-style flying entrance, landing, hammer raise ──────────
 function variantDescent(t){
-  // phase timings
-  const flyIn  = 0;        // flying in from sky at angle
-  const brake  = 1.8;      // decelerate, arms swing back, feet forward
-  const land   = 2.4;      // feet touch ground
-  const crouch = 2.55;     // shockwave
-  const rise   = 2.9;      // stand up
-  const swing  = 3.4;      // hammer windup
-  const strike = 3.9;      // hammer comes down
+  // phase timings — slower, more cinematic Superman entry
+  const flyIn  = 0;        // high-altitude silhouette visible from afar
+  const dive   = 1.2;      // starts diving down, fist-first
+  const brake  = 2.4;      // mid-air brake, legs swing forward
+  const land   = 2.9;      // feet slam ground
+  const rise   = 3.5;      // hero rises from one-knee pose
+  const swing  = 4.1;      // hammer windup
+  const strike = 4.6;      // hammer comes down
 
-  // hero trajectory — flies in from upper-left-back toward center
-  const start = new THREE.Vector3(-9, 8, -7);
-  const brakePos = new THREE.Vector3(-1.5, 2.2, 0.8);
+  // hero trajectory — starts HIGH and FAR, visible silhouette against sky
+  const skyStart = new THREE.Vector3(-3.5, 11.5, -9);   // closer + lower than before so silhouette reads
+  const divePos  = new THREE.Vector3(-1.8, 6.5, -2.5);
+  const brakePos = new THREE.Vector3(-0.5, 2.5, 0.4);
   const landPos  = new THREE.Vector3(0, 0, 0);
 
-  if (t < brake){
-    const p = t/brake;
-    // accelerate-then-decelerate curve for the arc
-    const eased = easeInOut(p);
-    hero.position.lerpVectors(start, brakePos, eased);
-    // add slight arc (higher in the middle)
-    hero.position.y += Math.sin(p*Math.PI)*1.2;
-    // FLYING POSE — body horizontal, arms forward like Superman
-    torsoGroup.rotation.x = THREE.MathUtils.lerp(-1.25, -0.9, p); // body mostly horizontal
-    torsoGroup.rotation.z = THREE.MathUtils.lerp(0.15, 0, p);
-    hero.rotation.y = THREE.MathUtils.lerp(-0.35, -0.05, easeOut(p));
-    // arms: LEFT extended forward (fist first), RIGHT tucked holding hammer back
-    leftArm.rotation.x = -Math.PI*0.85;
-    leftArm.rotation.z = Math.PI*0.02;
-    leftArm.userData.forearm.rotation.x = 0.1;
-    rightArm.rotation.x = -Math.PI*0.25;
-    rightArm.rotation.z = -Math.PI*0.1;
-    rightArm.userData.forearm.rotation.x = -0.4;
-    // legs trail behind — bend at hip
-    legs.rotation.x = 0.9;
-    // speed lines fx: (no-op here; cape will fluff)
+  if (t < dive){
+    // HIGH FLIGHT — distant silhouette, body horizontal, hammer-forward Superman pose
+    const p = t/dive;
+    const eased = p*p*(3-2*p); // smoothstep
+    hero.position.lerpVectors(skyStart, divePos, eased);
+    // minimal arc, mostly descent
+    hero.position.y += Math.sin(p*Math.PI)*0.8;
+    // horizontal flight pose
+    torsoGroup.rotation.x = -1.45;                   // fully horizontal
+    torsoGroup.rotation.z = 0.1*Math.sin(t*3);       // subtle body roll
+    hero.rotation.y = THREE.MathUtils.lerp(-0.5, -0.25, p);
+    // SUPERMAN POSE — both arms extended forward (one fist leading, hammer trailing in other)
+    leftArm.rotation.x = -Math.PI*0.92;
+    leftArm.rotation.z = 0;
+    leftArm.userData.forearm.rotation.x = 0;
+    rightArm.rotation.x = -Math.PI*0.85;
+    rightArm.rotation.z = -Math.PI*0.04;
+    rightArm.userData.forearm.rotation.x = 0;
+    legs.rotation.x = 1.0;                           // legs trail straight back
+    legs.rotation.z = 0;
+  } else if (t < brake){
+    // DIVE — body tilts more vertical, gaining speed, getting larger on screen
+    const p = (t - dive)/(brake - dive);
+    const eased = easeIn(p);                         // accelerate into brake
+    hero.position.lerpVectors(divePos, brakePos, eased);
+    // slight roll for speed
+    torsoGroup.rotation.x = THREE.MathUtils.lerp(-1.45, -1.0, p);
+    torsoGroup.rotation.z = 0.08*Math.sin(t*5);
+    hero.rotation.y = THREE.MathUtils.lerp(-0.25, -0.05, easeOut(p));
+    // arms still forward, but starting to flare
+    leftArm.rotation.x = THREE.MathUtils.lerp(-Math.PI*0.92, -Math.PI*0.6, p);
+    rightArm.rotation.x = THREE.MathUtils.lerp(-Math.PI*0.85, -Math.PI*0.5, p);
+    legs.rotation.x = THREE.MathUtils.lerp(1.0, 0.6, easeOut(p));
   } else if (t < land){
-    const p = (t - brake) / (land - brake);
-    // BRAKE: swing upright, arms back, feet come forward for landing
-    hero.position.lerpVectors(brakePos, landPos, easeOut(p));
-    hero.position.y += (1 - easeOut(p)) * 0.3; // small hang before touchdown
-    torsoGroup.rotation.x = THREE.MathUtils.lerp(-0.9, 0.25, easeOut(p));
+    // BRAKE + FEET FORWARD for landing — classic Superman flare
+    const p = (t - brake)/(land - brake);
+    const eased = easeOut(p);
+    hero.position.lerpVectors(brakePos, landPos, eased);
+    // small hover before impact
+    hero.position.y += (1 - eased) * 0.4;
+    // body uprights dramatically
+    torsoGroup.rotation.x = THREE.MathUtils.lerp(-1.0, 0.3, eased);
     torsoGroup.rotation.z = 0;
-    hero.rotation.y = THREE.MathUtils.lerp(-0.05, 0.0, p);
-    // arms swing back/out for braking
-    leftArm.rotation.x = THREE.MathUtils.lerp(-Math.PI*0.85, 0.4, easeOut(p));
-    leftArm.rotation.z = THREE.MathUtils.lerp(Math.PI*0.02, Math.PI*0.35, easeOut(p));
-    rightArm.rotation.x = THREE.MathUtils.lerp(-Math.PI*0.25, 0.3, easeOut(p));
-    rightArm.rotation.z = THREE.MathUtils.lerp(-Math.PI*0.1, -Math.PI*0.3, easeOut(p));
-    leftArm.userData.forearm.rotation.x = THREE.MathUtils.lerp(0.1, -0.1, p);
-    rightArm.userData.forearm.rotation.x = THREE.MathUtils.lerp(-0.4, 0, p);
-    // legs unfold, feet down
-    legs.rotation.x = THREE.MathUtils.lerp(0.9, 0, easeOut(p));
+    hero.rotation.y = 0;
+    // arms flare out like brakes
+    leftArm.rotation.x  = THREE.MathUtils.lerp(-Math.PI*0.6, 0.5, eased);
+    leftArm.rotation.z  = THREE.MathUtils.lerp(0, Math.PI*0.45, eased);
+    rightArm.rotation.x = THREE.MathUtils.lerp(-Math.PI*0.5, 0.4, eased);
+    rightArm.rotation.z = THREE.MathUtils.lerp(-Math.PI*0.04, -Math.PI*0.35, eased);
+    leftArm.userData.forearm.rotation.x  = THREE.MathUtils.lerp(0, -0.2, p);
+    rightArm.userData.forearm.rotation.x = THREE.MathUtils.lerp(0, -0.1, p);
+    // legs come down and forward
+    legs.rotation.x = THREE.MathUtils.lerp(0.6, -0.1, eased);
   } else {
-    // LANDED — on ground
+    // LANDED — HARD. One-knee superhero pose, held for beat
     hero.position.set(0,0,0);
     hero.rotation.y = 0;
-    // crouch impact
-    const crouchT = Math.min((t - land)/0.45, 1);
-    const crouchDepth = Math.sin(crouchT*Math.PI) * 0.4;
+    const sinceLand = t - land;
+    // Deep crouch on impact, bounce back slowly
+    const crouchT = Math.min(sinceLand/0.35, 1);
+    const crouchDepth = Math.sin(crouchT*Math.PI) * 0.55;
     torsoGroup.position.y = -crouchDepth;
-    torsoGroup.rotation.x = 0.25 * (1 - crouchT) + 0.1 * Math.sin(crouchT*Math.PI);
+    // Forward lean — fist planted on ground (classic pose)
+    const forwardLean = Math.sin(Math.min(sinceLand/0.6, 1)*Math.PI) * 0.15;
+    torsoGroup.rotation.x = 0.4 * Math.max(0, 1 - sinceLand/0.8) + forwardLean;
     legs.rotation.x = 0;
 
     if (t < rise){
-      // still crouched, arms bracing
-      leftArm.rotation.x = 0.4 * (1-crouchT);
-      leftArm.rotation.z = Math.PI*0.35 * (1-crouchT) + Math.PI*0.08 * crouchT;
-      rightArm.rotation.x = 0.3 * (1-crouchT);
-      rightArm.rotation.z = -Math.PI*0.3 * (1-crouchT) - Math.PI*0.08 * crouchT;
+      // HERO POSE — left fist down on ground, right arm (with hammer) back and out
+      // Left arm: planted forward/down (fist to ground)
+      leftArm.rotation.x = THREE.MathUtils.lerp(0.5, 1.35, Math.min(sinceLand/0.3, 1));  // arm swings DOWN+FORWARD
+      leftArm.rotation.z = THREE.MathUtils.lerp(Math.PI*0.45, Math.PI*0.05, Math.min(sinceLand/0.3, 1));
+      leftArm.userData.forearm.rotation.x = -0.4;
+      // Right arm: flared out behind with hammer
+      rightArm.rotation.x = THREE.MathUtils.lerp(0.4, -0.1, Math.min(sinceLand/0.3, 1));
+      rightArm.rotation.z = THREE.MathUtils.lerp(-Math.PI*0.35, -Math.PI*0.45, Math.min(sinceLand/0.3, 1));
+      rightArm.userData.forearm.rotation.x = 0.1;
     } else if (t < swing){
-      // STAND UP
-      const rp = Math.min((t - rise)/0.5, 1);
-      torsoGroup.position.y = 0;
-      torsoGroup.rotation.x = 0;
-      leftArm.rotation.x = 0; leftArm.rotation.z = Math.PI*0.08;
-      rightArm.rotation.x = 0; rightArm.rotation.z = -Math.PI*0.08;
+      // RISE — stand up slowly, hero shot
+      const rp = Math.min((t - rise)/0.6, 1);
+      const er = easeOut(rp);
+      torsoGroup.position.y = THREE.MathUtils.lerp(torsoGroup.position.y, 0, er);
+      torsoGroup.rotation.x = THREE.MathUtils.lerp(torsoGroup.rotation.x, 0, er);
+      leftArm.rotation.x  = THREE.MathUtils.lerp(1.35, 0, er);
+      leftArm.rotation.z  = THREE.MathUtils.lerp(Math.PI*0.05, Math.PI*0.08, er);
+      leftArm.userData.forearm.rotation.x = THREE.MathUtils.lerp(-0.4, 0, er);
+      rightArm.rotation.x = THREE.MathUtils.lerp(-0.1, 0, er);
+      rightArm.rotation.z = THREE.MathUtils.lerp(-Math.PI*0.45, -Math.PI*0.08, er);
+      rightArm.userData.forearm.rotation.x = THREE.MathUtils.lerp(0.1, 0, er);
     } else if (t < strike){
-      // HAMMER WINDUP — right arm raises high and back
+      // HAMMER WINDUP
       const sp = (t - swing)/(strike - swing);
       rightArm.rotation.x = THREE.MathUtils.lerp(0, -2.4, easeOut(sp));
       rightArm.rotation.z = THREE.MathUtils.lerp(-Math.PI*0.08, -Math.PI*0.55, easeOut(sp));
@@ -719,8 +749,8 @@ function variantDescent(t){
   // hammer stays in right hand throughout
   attachHammerToRightHand();
   if (t < brake){
-    // hammer trails slightly behind
-    hammerGroup.rotation.z = -0.4;
+    // hammer trails slightly behind during flight
+    hammerGroup.rotation.z = -0.5;
   } else if (t < swing){
     hammerGroup.rotation.z = -0.2;
   } else if (t < strike){
@@ -731,22 +761,57 @@ function variantDescent(t){
     hammerGroup.rotation.z = THREE.MathUtils.lerp(-0.8, 2.2, easeIn(sp));
   }
 
-  // CAMERA — tracking shot, low orbit, then punch-in on strike
-  if (t < brake){
-    const p = t/brake;
-    // start wide, move closer as he flies in
-    const camAng = -0.6 + 0.4*p;
-    const camR = THREE.MathUtils.lerp(13, 8, easeOut(p));
-    camera.position.set(Math.sin(camAng)*camR + 2, 4.2 - 1.2*p, Math.cos(camAng)*camR);
-    camera.lookAt(hero.position.x, hero.position.y + 1, hero.position.z);
+  // CAMERA — wide establishing, then track + punch-in
+  if (t < dive){
+    // WIDE — see the figure up in the sky, small and far
+    const p = t/dive;
+    camera.position.set(6, 4.5, 14);                 // wide, slightly elevated
+    camera.lookAt(hero.position.x, hero.position.y - 0.5, hero.position.z);
+  } else if (t < land){
+    // TRACK — follow him down
+    const p = (t - dive)/(land - dive);
+    const eased = easeOut(p);
+    camera.position.set(
+      THREE.MathUtils.lerp(6, -2, eased),
+      THREE.MathUtils.lerp(4.5, 2.0, eased),
+      THREE.MathUtils.lerp(14, 7.2, eased)
+    );
+    camera.lookAt(hero.position.x*0.4, hero.position.y, hero.position.z*0.4);
   } else if (t < strike){
-    const p = Math.min((t - brake)/(strike - brake), 1);
-    camera.position.set(THREE.MathUtils.lerp(-1.5, -1.8, p), THREE.MathUtils.lerp(3.0, 1.6, easeOut(p)), THREE.MathUtils.lerp(8, 6.2, easeOut(p)));
-    camera.lookAt(0, THREE.MathUtils.lerp(1.4, 1.2, p), 0);
+    // LOW HERO SHOT — ground level, pushing in
+    const p = Math.min((t - land)/(strike - land), 1);
+    camera.position.set(
+      THREE.MathUtils.lerp(-2, -1.8, p),
+      THREE.MathUtils.lerp(1.1, 1.5, easeOut(p)),
+      THREE.MathUtils.lerp(7.2, 6.0, easeOut(p))
+    );
+    camera.lookAt(0, THREE.MathUtils.lerp(0.6, 1.2, p), 0);
   } else {
+    // HOLD — pull out slightly
     const p = Math.min((t - strike)/1.5, 1);
-    camera.position.set(-1.6 + 0.3*p, 1.6 + 0.2*p, 6.2 + 0.5*p);
+    camera.position.set(-1.6 + 0.3*p, 1.5 + 0.2*p, 6.0 + 0.5*p);
     camera.lookAt(0, 1.0, 0);
+  }
+
+  // LANDING IMPACT — big visible ground-hit burst
+  const sinceLand = t - land;
+  if (sinceLand >= 0 && sinceLand < 1.8){
+    const p = sinceLand/1.8;
+    // strong primary shockwave ring
+    shock.material.opacity = Math.max(shock.material.opacity, (1-p)*1.0);
+    shock.scale.setScalar(Math.max(shock.scale.x, 1 + p*28));
+    shock2.material.opacity = Math.max(shock2.material.opacity, (1-p)*0.75);
+    shock2.scale.setScalar(Math.max(shock2.scale.x, 1 + p*20));
+    pulseLight.intensity = Math.max(pulseLight.intensity, (1-p)*10);
+  }
+  if (sinceLand >= 0 && sinceLand < 0.5){
+    // bright landing flash
+    flash.material.opacity = Math.max(flash.material.opacity, (1-sinceLand*2)*0.95);
+  }
+  if (sinceLand >= 0 && sinceLand < 0.45){
+    // hard camera shake on landing
+    camera.position.y += Math.sin(sinceLand*70)*0.12*(1-sinceLand*2.2);
+    camera.position.x += Math.cos(sinceLand*58)*0.08*(1-sinceLand*2.2);
   }
 
   // IMPACT — shockwave + flash when hammer strikes
@@ -763,14 +828,6 @@ function variantDescent(t){
   if (sinceStrike >= 0 && sinceStrike < 0.3){
     camera.position.y += Math.sin(sinceStrike*60)*0.07*(1-sinceStrike*3.3);
     camera.position.x += Math.cos(sinceStrike*54)*0.05*(1-sinceStrike*3.3);
-  }
-
-  // secondary touchdown puff when feet hit
-  const sinceLand = t - land;
-  if (sinceLand >= 0 && sinceLand < 0.5){
-    const p = sinceLand/0.5;
-    shock2.material.opacity = Math.max(shock2.material.opacity, (1-p)*0.4);
-    pulseLight.intensity = Math.max(pulseLight.intensity, (1-p)*2);
   }
 
   // runes start glowing on strike
@@ -1031,13 +1088,7 @@ function whoosh(dur=.6){
 }
 
 let thunkTimer = 0;
-function thunkSoon(variant){
-  clearTimeout(thunkTimer);
-  if (variant === 'descent')      { setTimeout(()=> whoosh(.9), 400); setTimeout(()=> thunk(1.1, .5), 2400); thunkTimer = setTimeout(()=> thunk(.9, 1.2), 3900); }
-  else if (variant === 'strike'){ setTimeout(()=> whoosh(.5), 1200); thunkTimer = setTimeout(()=> thunk(1, 1.2), 1850); }
-  else if (variant === 'orbit')   thunkTimer = setTimeout(()=> thunk(1.1, .6), 1200);
-  else if (variant === 'ascend')  thunkTimer = setTimeout(()=> whoosh(1.1), 600);
-}
+function thunkSoon(variant){ /* audio disabled */ }
 
 // ─────────── UI wiring ───────────
 const heroUI = document.getElementById('heroUI');
@@ -1055,9 +1106,8 @@ document.getElementById('taglineIn').addEventListener('input', e=>{ state.taglin
 document.getElementById('kickerIn').addEventListener('input', e=>{ state.kicker = e.target.value; document.getElementById('kicker').textContent = state.kicker; persist({kicker: state.kicker}); });
 
 document.getElementById('replayBtn').addEventListener('click', ()=> play(currentVariant));
-document.getElementById('ctaReplay').addEventListener('click', ()=> play(currentVariant));
 document.getElementById('openApp').addEventListener('click', ()=> { window.dismissOrakelSplash && window.dismissOrakelSplash(); });
-document.getElementById('ctaPrimary').addEventListener('click', ()=>{ thunk(.95,1); setTimeout(()=> { window.dismissOrakelSplash && window.dismissOrakelSplash(); }, 180); });
+document.getElementById('ctaPrimary').addEventListener('click', ()=>{ setTimeout(()=> { window.dismissOrakelSplash && window.dismissOrakelSplash(); }, 180); });
 
 canvas.addEventListener('click', (e)=>{
   if (e.target.closest('button,a')) return;
