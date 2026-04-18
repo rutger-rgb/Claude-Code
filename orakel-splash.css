@@ -120,10 +120,10 @@ body.orakel-active::after {
   border-color: rgba(255,255,255,.08); backdrop-filter: blur(10px);
 }
 
-#orakel-splash.shown .kicker { animation: orakelTextUp .8s cubic-bezier(.16,1,.3,1) var(--t-kicker, 2.3s) both; }
-#orakel-splash.shown .big-title { animation: orakelTitleCrash 1.1s cubic-bezier(.34,1.56,.64,1) var(--t-title, 2.45s) both; }
-#orakel-splash.shown .tagline { animation: orakelTextUp 1s cubic-bezier(.16,1,.3,1) var(--t-tag, 2.9s) both; }
-#orakel-splash.shown .cta-row { animation: orakelTextUp 1s cubic-bezier(.16,1,.3,1) var(--t-cta, 3.2s) both; }
+#orakel-splash .shown .kicker { animation: orakelTextUp .8s cubic-bezier(.16,1,.3,1) var(--t-kicker, 2.3s) both; }
+#orakel-splash .shown .big-title { animation: orakelTitleCrash 1.1s cubic-bezier(.34,1.56,.64,1) var(--t-title, 2.45s) both; }
+#orakel-splash .shown .tagline { animation: orakelTextUp 1s cubic-bezier(.16,1,.3,1) var(--t-tag, 2.9s) both; }
+#orakel-splash .shown .cta-row { animation: orakelTextUp 1s cubic-bezier(.16,1,.3,1) var(--t-cta, 3.2s) both; }
 
 @keyframes orakelTextUp {
   from { opacity: 0; transform: translateY(14px); }
